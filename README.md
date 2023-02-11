@@ -145,6 +145,71 @@ LogBase.addHook('log', 'Sentry', (args, loggerType, isEnabled, scope, hookName) 
 })
 ```
 
+### logVerbose
+
+Smaller logs files will always help developers to debug faster. For logs that can generate multiple lines, use `logVerbose`:
+
+```js
+// simulating a data from API
+const result = {
+    id: '89dnk-5jkl6',
+    success: true,
+    // objects containing a lot of data
+    payload: { ... },
+    data: { ... },
+}
+logVerbose(`Log everything important in first argument. ID[${result.id}] success[${result.success}]`, result)
+```
+
+When in default mode (non-verbose mode), `logVerbose` will output:
+
+```bash
+app-name:filename.js Log everything important in first argument. ID[89dnk-5jkl6] success[true]| Verbose debugger available for: an object with keys [id,success,payload,data]
+```
+
+When in verbose mode (DEBUG_VERBOSE=true), `logVerbose` will output:
+
+```bash
+app-name:filename.js Log everything important in first argument. ID[89dnk-5jkl6] success[true] {
+    id: '89dnk-5jkl6',
+    success: true,
+    payload: {
+        // many
+        // many
+        // lines
+    },
+    data: {
+        // many
+        // many
+        // lines
+    },
+}
+```
+
+### ENV options
+
+Please see https://github.com/calvintwr/debug-next/blob/master/src/types/node.process.env.d.ts for a full list of ENV options and their explanation.
+
+#### Recommended settings for maximum verbosity
+
+```
+DEBUG_VERBOSE=true
+DEBUG_ERROR=true
+DEBUG_DEPTH=5
+DEBUG_SHOW_HIDDEN=true
+DEBUG_GETTERS=true
+```
+
+#### Recommended settings for production
+
+`debug-next` should run without settings in production.
+
+Occassionally, you would want to only turn on namespaces for latest code changes:
+
+```
+DEBUG=namespace:with:latest-code-changes*
+```
+
 ## Roadmap:
 
 1. Browser compatibility.
