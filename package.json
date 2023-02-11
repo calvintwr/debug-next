@@ -45,10 +45,10 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/calvintwr/debugts.git"
+        "url": "git+https://github.com/calvintwr/debug-next.git"
     },
     "bugs": {
-        "url": "https://github.com/calvintwr/debugts/issues"
+        "url": "https://github.com/calvintwr/debug-next/issues"
     },
-    "homepage": "https://github.com/calvintwr/debugts#readme"
+    "homepage": "https://github.com/calvintwr/debug-next#readme"
 }
