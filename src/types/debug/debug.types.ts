@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-declare const debug: Debug & { debug: Debug; default: Debug }
+import { msFn } from './ms.types'
 
-declare module 'debug' {
-    export = debug
-    export as namespace debug
+type formatter = (v: any) => string
+
+interface Formatters {
+    [formatter: string]: formatter
 }
 
-interface Debug {
+export interface Debug {
     (namespace: string): Debugger
     coerce: (val: any) => any
     disable: () => string
@@ -15,7 +16,7 @@ interface Debug {
     formatArgs: (this: Debugger, args: unknown[]) => void
     log: (...args: unknown[]) => void
     selectColor: (namespace: string) => string | number
-    humanize: typeof import('ms')
+    humanize: typeof msFn
 
     names: RegExp[]
     skips: RegExp[]
@@ -37,17 +38,7 @@ interface Debug {
     formatters: Formatters
 }
 
-type IDebug = Debug
-
-type formatter = (v: any) => string
-
-interface Formatters {
-    [formatter: string]: formatter
-}
-
-type IDebugger = Debugger
-
-interface Debugger {
+export interface Debugger {
     (...args: unknown[]): void
     /**
      * Debug uses printf-style formatting. Below are the officially supported formatters:
@@ -109,7 +100,7 @@ interface Debugger {
     extend: (namespace: string, delimiter?: string) => Debugger
 
     /**
-     * Use env variables to toggle this rather can manipulating directly here.
+     * Use env variables to toggle this rather than manipulating directly here.
      */
     inspectOpts: {
         hideDate: boolean | null | number

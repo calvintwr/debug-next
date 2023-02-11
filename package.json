@@ -28,6 +28,7 @@
         "debug": "git+https://github.com/calvintwr/debug.git#11c20a1cdb2727767fcc37da5d0de82b02dbe91c"
     },
     "devDependencies": {
+        "@types/debug": "^4.1.7",
         "@types/jest": "^29.2.6",
         "@types/node": "^18.11.18",
         "@typescript-eslint/eslint-plugin": "^5.48.2",

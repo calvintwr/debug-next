@@ -4,10 +4,11 @@ import { cleanInspectOpts } from './helpers/cleanInspectOpts'
 import { isPrimitive } from './helpers/isPrimitive'
 import { formatWithOptions } from 'util'
 import { callerCallsite } from './helpers/callerCallsite'
+import { Debugger } from './types/debug/debug.types'
 
 // TODO: Figure deprecation later
 /**
- * @deprecated Please use `import { Debug } from 'debug'`. Or, you may instantiate automatically namespaces loggers via `import { log, logError, logWarn, logFatal } from 'debug'`.
+ * @deprecated Please use `import { debug } from 'debug-next'`. Or, you may instantiate automatically namespaces loggers via `import { Log } from 'debug-next'`.
  */
 export default debug
 
@@ -236,7 +237,7 @@ const createLogger = (filenameOrNamespace: string | undefined) => {
     }
 
     // create a debugger that logs to normal logs
-    const logger = debug(namespace || '')
+    const logger = debug(namespace || '') as Debugger
 
     // overwrite old behaviour of writing to `process.stderr` to use `process.stdout` instead.
     // this allow logs to be separated between non-error types (process.stdout) and error types (process.stderr)
@@ -293,10 +294,10 @@ export const Log = (fileName?: string) => {
     // if debugStdErr is enabled, we can use the same debugger for FATAL
     let debugStdErrFatal: Debugger
     if (debugStdErr.enabled === true) {
-        debugStdErrFatal = debugStdErr
+        debugStdErrFatal = debugStdErr as Debugger
     } else {
         // else we will create another one.
-        debugStdErrFatal = debug(debugStdOut.namespace)
+        debugStdErrFatal = debug(debugStdOut.namespace) as Debugger
         // fatal is forced enabled by default
         debugStdErrFatal.enabled = true
     }
@@ -406,10 +407,10 @@ export const Log = (fileName?: string) => {
     const logError: Debugger = Object.assign(
         (...args: [arg: unknown, ...args: unknown[]]) => {
             const scope = callerCallsite({ depth: 0 })?.scope
-            debugWithScope(scope || '', debugStdErr, ...args)
+            debugWithScope(scope || '', debugStdErr as Debugger, ...args)
             LogBase._runHooks('logError', debugStdErr.enabled, scope, args)
         },
-        debugStdErr,
+        debugStdErr as Debugger,
     )
 
     const logFatal: Debugger = Object.assign(
