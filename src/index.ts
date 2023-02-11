@@ -268,11 +268,11 @@ export const Log = (fileName?: string) => {
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace)
     // force debug to be enabled despite namespacing
-    // enabled when NODE_ENV is 'test' so that it can be tested.
-    if (process.env.LOG_ERROR === 'true' || process.env.NODE_ENV === 'test')
+    if (process.env.LOG_ERROR === 'true' || process.env.DEBUG_ERROR === 'true')
         debugStdErr.enabled = true
     // only overwrite when explicitly declared to be false
-    if (process.env.LOG_ERROR === 'false') debugStdErr.enabled = false
+    if (process.env.LOG_ERROR === 'false' || process.env.DEBUG_ERROR === 'false')
+        debugStdErr.enabled = false
 
     // if debugStdErr is enabled, we can use the same debugger for FATAL
     let debugStdErrFatal: Debugger
@@ -316,7 +316,7 @@ export const Log = (fileName?: string) => {
             if (process.env.LOG_EXPAND_VERBOSE) {
                 // eslint-disable-next-line no-console
                 console.warn(
-                    'Deprecated: Use `LOG_EXPAND_VERBOSE` instead of `LOG_VERBOSE`.',
+                    'Deprecated: Use `LOG_EXPAND_VERBOSE` instead of `DEBUG_VERBOSE`.',
                 )
             }
 

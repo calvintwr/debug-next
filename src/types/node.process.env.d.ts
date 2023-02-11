@@ -22,6 +22,12 @@ declare namespace NodeJS {
          */
         DEBUG?: string
 
+        // LOG_VERBOSE enables namespaced loggers that are expecting largest datasets.
+        DEBUG_VERBOSE?: 'true' | 'false'
+
+        // (2) can be switched on regardless of DEBUG, by LOG_ERROR=true (advisable during heavy development / deploying radical changes)
+        DEBUG_ERROR?: 'true' | 'false'
+
         /**
          * Hide date from debug output (non-TTY).
          */
