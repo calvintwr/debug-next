@@ -116,7 +116,23 @@ export const LogBase = {
      * @example
      * // To add a transportation to Datadog
      * import { datadogLogs } from '@datadog/browser-logs'
-     * const datadogHook = (args) => datadogLogs.logger.info('Info', { info: args })
+     * const datadogHook = (args, loggerType, isEnabled, scope, hookName) => {
+     *     // run only if the logger was enabled by namespace
+     *     if (isEnabled) {
+     *
+     *         // loggerType is log/logDebug etc...
+     *         const msg = loggerType
+     *
+     *         // scope is the function caller name
+     *         msg += ` ${scope}`
+     *
+     *         // hookName is `datadog` in this case
+     *         msg += ` ${hookName}`
+     *
+     *         // hookName is `datadog` in this case
+     *         datadogLogs.logger.info(msg, { info: args })
+     *     }
+     * }
      * LogBase.addHook('log', 'datadog', datadogHook)
      *
      * @example
