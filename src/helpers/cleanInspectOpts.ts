@@ -1,4 +1,4 @@
-import { debug } from 'debug'
+import { Debugger } from '../types/debug/debug.types'
 
 /**
  * Debug can parse inspectOpts from env into boolean, null or number.
@@ -8,9 +8,7 @@ import { debug } from 'debug'
  * @param inspectOpts
  * @returns
  */
-export const cleanInspectOpts = (
-    inspectOpts: ReturnType<typeof debug>['inspectOpts'],
-) => {
+export const cleanInspectOpts = (inspectOpts: Debugger['inspectOpts']) => {
     if (typeof inspectOpts !== 'object') return {}
     if (Object.keys(inspectOpts).length === 0) return {}
 
