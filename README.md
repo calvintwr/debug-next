@@ -47,17 +47,21 @@ Say you have 2 files `index.js` and `foo.js`:
 src/index.ts:
 
 ```js
-import { log, logBase } from 'debugts'
+import { Log, LogBase } from 'debugts'
 import * as foo from './foo'
+
 // do this once in index/app/server.ts
-logBase.init('my-awesome-app', __dirname) // __dirname is a node global
+LogBase.init('my-awesome-app', __dirname) // __dirname is a node global
+
+const { log } = Log()
 log('output from index')
 ```
 
 foo.ts:
 
 ```js
-import { log } from 'debugts'
+import { Log } from 'debugts'
+const { log } = Log()
 log('output from foo')
 ```
 
