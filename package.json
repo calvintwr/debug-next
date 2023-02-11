@@ -1,6 +1,6 @@
 {
     "name": "debug-next",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "A feature-enhanced TypeScript drop-in replacement for a very popular and simple-to-use debug module.",
     "main": "./dist/index.js",
     "keywords": [
