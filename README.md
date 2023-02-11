@@ -1,23 +1,23 @@
-> _debugTS_ -- A feature-enhanced TypeScript drop-in replacement for a very popular and simple-to-use [debug][https://www.npmjs.com/package/debug] module.
+> _debugNEXT_ -- A feature-enhanced TypeScript drop-in replacement for a very popular and simple-to-use [debug][https://www.npmjs.com/package/debug] module.
 
 ![NodeJS Debugging Utility](https://user-images.githubusercontent.com/71256/29091486-fa38524c-7c37-11e7-895f-e7ec8e1039b6.png)
 
-## Why debugTS?
+## Why debug-next?
 
 You will soon realise no matter their functionaliy, your logs will be flooded in no time.
 
 The simple yet elegant solution is namespacing so that you can have granular control over with part of your code to log.
 
-The original `debug` module exists in many popular frameworks. But it never grew in functionality. `debugTS` is a drop-in replacement that adds new features.
+The original `debug` module exists in many popular frameworks. But it never grew in functionality. `debug-next` is a drop-in replacement that adds new features.
 
 One problem that the original `debug` module had was that it indiscriminately log everything to error logs (`process.stderr` for Node environments / `console.error` for non-node environments)
 
 ## Installation
 
 ```
-npm install --save 'debugts'
+npm install --save 'debug-next'
 // or
-yarn add 'debugts'
+yarn add 'debug-next'
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ yarn add 'debugts'
 ### Code (index.js):
 
 ```js
-import { debug } from 'debugts'
+import { debug } from 'debug-next'
 
 const log = debug('namespace')
 const logFoo = debug('namespace:foo')
@@ -40,14 +40,14 @@ logBarChild('Output from logBarChild.')
 
 ### New Features - Automatic namespacing based on your folder structure
 
-Your folder structure is your natural namespace. `debugTS` uses that by default to generate namespacing.
+Your folder structure is your natural namespace. `debug-next` uses that by default to generate namespacing.
 
 Say you have 2 files `index.js` and `foo.js`:
 
 src/index.ts:
 
 ```js
-import { Log, LogBase } from 'debugts'
+import { Log, LogBase } from 'debug-next'
 import * as foo from './foo'
 
 // do this once in index/app/server.ts
@@ -60,7 +60,7 @@ log('output from index')
 foo.ts:
 
 ```js
-import { Log } from 'debugts'
+import { Log } from 'debug-next'
 const { log } = Log()
 log('output from foo')
 ```
@@ -117,7 +117,7 @@ Run any hooks with your debugging:
 
 ```js
 // src/index.js
-import { LogBase, Log } from 'debugts'
+import { LogBase, Log } from 'debug-next'
 
 const { log } = Log()
 
