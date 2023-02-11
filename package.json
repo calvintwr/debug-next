@@ -25,7 +25,7 @@
     "author": "calvintwr",
     "license": "MIT",
     "dependencies": {
-        "debug": "git+https://github.com/calvintwr/debug.git#11c20a1cdb2727767fcc37da5d0de82b02dbe91c"
+        "debug": "git+https://github.com/calvintwr/debug.git#329eefccf7596bfd3b9ec821588b2b0dce128648"
     },
     "devDependencies": {
         "@types/debug": "^4.1.7",

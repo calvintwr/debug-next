@@ -1123,9 +1123,9 @@ cross-spawn@^7.0.2, cross-spawn@^7.0.3:
     shebang-command "^2.0.0"
     which "^2.0.1"
 
-debug@^4.1.0, debug@^4.1.1, debug@^4.3.2, debug@^4.3.4, "debug@git+https://github.com/calvintwr/debug.git#11c20a1cdb2727767fcc37da5d0de82b02dbe91c":
+debug@^4.1.0, debug@^4.1.1, debug@^4.3.2, debug@^4.3.4, "debug@git+https://github.com/calvintwr/debug.git#329eefccf7596bfd3b9ec821588b2b0dce128648":
   version "4.3.4"
-  resolved "git+https://github.com/calvintwr/debug.git#11c20a1cdb2727767fcc37da5d0de82b02dbe91c"
+  resolved "git+https://github.com/calvintwr/debug.git#329eefccf7596bfd3b9ec821588b2b0dce128648"
   dependencies:
     ms "2.1.2"
 
