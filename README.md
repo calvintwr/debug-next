@@ -10,7 +10,12 @@ The simple yet elegant solution is namespacing so that you can have granular con
 
 The original `debug` module exists in many popular frameworks. But it never grew in functionality. `debug-next` is a drop-in replacement that adds new features.
 
-One problem that the original `debug` module had was that it indiscriminately log everything to error logs (`process.stderr` for Node environments / `console.error` for non-node environments)
+One problem that the original `debug` module had was that it indiscriminately log everything to error logs (`process.stderr` for Node environments / `console.error` for non-node environments). `debug-next` has new debuggers that follows mainstream conventions (`log`, `logDebug`, `logWarn`, `logError`, `logFatal`), and will log to normal or error logs depending on which is used:
+
+```js
+log('This is equivalent to console.log / process.stdout.write')
+logError('This is equivalent to console.error / process.stderr.write')
+```
 
 ## Installation
 
