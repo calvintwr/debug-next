@@ -20,9 +20,9 @@ logError('This is equivalent to console.error / process.stderr.write')
 ## Installation
 
 ```
-npm install --save 'debug-next'
+npm install --save debug-next
 // or
-yarn add 'debug-next'
+yarn add debug-next
 ```
 
 ## Usage
