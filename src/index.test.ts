@@ -21,6 +21,15 @@ describe('Log', () => {
         expect(namespace).toEqual(NAMESPACE)
     })
 
+    should('be able to be disabled', () => {
+        const logSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => false)
+        const { log } = Log()
+        log.enabled = false
+        log('test')
+        expect(logSpy).not.toBeCalled()
+        logSpy.mockRestore()
+    })
+
     should('initialize correctly', () => {
         const ret = Log(__filename)
         expect(ret).toBeDefined()

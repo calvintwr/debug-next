@@ -31,14 +31,9 @@ type THookMap = {
     ) => void
 }
 
-type THooksObject = {
-    log: THookMap
-    logWarn: THookMap
-    logDebug: THookMap
-    logVerbose: THookMap
-    logError: THookMap
-    logFatal: THookMap
-}
+type TDebuggers = 'log' | 'logWarn' | 'logDebug' | 'logVerbose' | 'logError' | 'logFatal'
+
+type THooksObject = { [Key in TDebuggers]: THookMap }
 
 export const LogBase = {
     appName: 'debug',
@@ -96,7 +91,7 @@ export const LogBase = {
         logFatal: <THookMap>{},
     },
     _runHooks(
-        logger: keyof typeof this._hooks,
+        logger: TDebuggers,
         isEnabled: boolean,
         scope: undefined | null | string,
         args: unknown[],
@@ -248,6 +243,36 @@ const createLogger = (filenameOrNamespace: string | undefined) => {
     return logger
 }
 
+const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
+    const modifiedDebugger = Object.assign((...args: unknown[]) => {
+        // callerCallsite has some performance overheads.
+        // if it not enabled, and have no hooks to run, return
+        if (
+            !debugInstance.enabled &&
+            Object.keys(LogBase._hooks[name]).length === 0 &&
+            Object.keys(LogBase._hooksUnsafe[name]).length === 0
+        ) {
+            return
+        }
+
+        // get callsite, run debug, and hooks afterwards.
+        const scope = callerCallsite({ depth: 0 })?.scope
+        debugWithScope(scope || '', debugInstance, ...args)
+        LogBase._runHooks(name, debugInstance.enabled, scope, args)
+    }, debugInstance)
+
+    // restore the reference of `enabled` back to the Debugger
+    Object.defineProperty(modifiedDebugger, 'enabled', {
+        get() {
+            return debugInstance.enabled
+        },
+        set(v: boolean) {
+            debugInstance.enabled = v
+        },
+    })
+    return modifiedDebugger
+}
+
 /**
  * Call this to debug with scope. Scope can either be passed in, or be automagically obtained.
  * @param scope Pass in scope if you have, otherwise use null/undefined to automagically obtain scope. Pass in empty string '' skip (no scope).
@@ -283,7 +308,7 @@ export const Log = (fileName?: string) => {
     const debugStdOut = createLogger(fileName)
 
     // create a debugger that logs to error logs (default behaviour of the debug module)
-    const debugStdErr = debug(debugStdOut.namespace)
+    const debugStdErr = debug(debugStdOut.namespace) as Debugger
     // force debug to be enabled despite namespacing
     if (process.env.LOG_ERROR === 'true' || process.env.DEBUG_ERROR === 'true')
         debugStdErr.enabled = true
@@ -302,38 +327,28 @@ export const Log = (fileName?: string) => {
         debugStdErrFatal.enabled = true
     }
 
-    const log: Debugger = Object.assign((...args: unknown[]) => {
-        const scope = callerCallsite({ depth: 0 })?.scope
-        debugWithScope(scope || '', debugStdOut, ...args)
-        LogBase._runHooks('log', debugStdOut.enabled, scope, args)
-    }, debugStdOut)
-
-    const logWarn: Debugger = Object.assign(
-        (...args: [arg: unknown, ...args: unknown[]]) => {
-            const scope = callerCallsite({ depth: 0 })?.scope
-            debugWithScope(scope || '', debugStdOut, ...args)
-            LogBase._runHooks('logWarn', debugStdOut.enabled, scope, args)
-        },
-        debugStdOut,
-    )
-
-    const logDebug: Debugger = Object.assign(
-        (...args: [arg: unknown, ...args: unknown[]]) => {
-            const scope = callerCallsite({ depth: 0 })?.scope
-            debugWithScope(scope || '', debugStdOut, ...args)
-            LogBase._runHooks('logDebug', debugStdOut.enabled, scope, args)
-        },
-        debugStdOut,
-    )
+    const log: Debugger = _createDebugger('log', debugStdOut)
+    const logWarn: Debugger = _createDebugger('logWarn', debugStdOut)
+    const logDebug: Debugger = _createDebugger('logDebug', debugStdOut)
 
     const logVerbose: Debugger = Object.assign(
         (...args: [arg: unknown, ...args: unknown[]]) => {
+            // callerCallsite has some performance overheads.
+            // if it not enabled, and have no hooks to run, return
+            if (
+                !debugStdOut.enabled &&
+                Object.keys(LogBase._hooks.logVerbose).length === 0 &&
+                Object.keys(LogBase._hooksUnsafe.logVerbose).length === 0
+            ) {
+                return
+            }
+
             // LOG_VERBOSE for backward compatibility
             // use DEBUG_VERBOSE
             if (process.env.LOG_EXPAND_VERBOSE) {
                 // eslint-disable-next-line no-console
                 console.warn(
-                    'Deprecated: Use `LOG_EXPAND_VERBOSE` instead of `DEBUG_VERBOSE`.',
+                    'Deprecated: Use `DEBUG_VERBOSE` instead of `LOG_EXPAND_VERBOSE`.',
                 )
             }
 
@@ -404,14 +419,7 @@ export const Log = (fileName?: string) => {
         debugStdOut,
     )
 
-    const logError: Debugger = Object.assign(
-        (...args: [arg: unknown, ...args: unknown[]]) => {
-            const scope = callerCallsite({ depth: 0 })?.scope
-            debugWithScope(scope || '', debugStdErr as Debugger, ...args)
-            LogBase._runHooks('logError', debugStdErr.enabled, scope, args)
-        },
-        debugStdErr as Debugger,
-    )
+    const logError: Debugger = _createDebugger('logError', debugStdErr)
 
     const logFatal: Debugger = Object.assign(
         (...args: [arg: unknown, ...args: unknown[]]) => {
