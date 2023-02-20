@@ -419,6 +419,16 @@ export const Log = (fileName?: string) => {
         debugStdOut,
     )
 
+    // restore the reference of logVerbose's `enabled` back to the Debugger
+    Object.defineProperty(logVerbose, 'enabled', {
+        get() {
+            return debugStdOut.enabled
+        },
+        set(v: boolean) {
+            debugStdOut.enabled = v
+        },
+    })
+
     const logError: Debugger = _createDebugger('logError', debugStdErr)
 
     const logFatal: Debugger = Object.assign(
