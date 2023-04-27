@@ -4,11 +4,11 @@
 
 ## Why debug-next?
 
-You will soon realise no matter their functionaliy, your logs will be flooded in no time.
+Your logs are always either nothing, or flooded.
 
-The simple yet elegant solution is namespacing so that you can have granular control over with part of your code to log.
+The simple yet elegant solution is namespacing so that you can have granular control over which parts of your code to log.
 
-The original `debug` module exists in many popular frameworks. But it never grew in functionality. `debug-next` is a drop-in replacement that adds new features.
+The original `debug` module exists in many popular frameworks, but it never grew in functionality. `debug-next` is a drop-in replacement that adds new features.
 
 One problem that the original `debug` module had was that it indiscriminately log everything to error logs (`process.stderr` for Node environments / `console.error` for non-node environments). `debug-next` has new debuggers that follows mainstream conventions (`log`, `logDebug`, `logWarn`, `logError`, `logFatal`), and will log to normal or error logs depending on which is used:
 
