@@ -256,9 +256,15 @@ const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
         }
 
         // get callsite, run debug, and hooks afterwards.
-        const scope = callerCallsite({ depth: 0 })?.scope
-        debugWithScope(scope || '', debugInstance, ...args)
-        LogBase._runHooks(name, debugInstance.enabled, scope, args)
+        const callsite = callerCallsite({ depth: 0 })
+        debugWithScope(
+            callsite?.scope || '',
+            callsite?.line,
+            callsite?.position,
+            debugInstance,
+            ...args,
+        )
+        LogBase._runHooks(name, debugInstance.enabled, callsite?.scope, args)
     }, debugInstance)
 
     // restore the reference of `enabled` back to the Debugger
@@ -276,15 +282,28 @@ const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
 /**
  * Call this to debug with scope. Scope can either be passed in, or be automagically obtained.
  * @param scope Pass in scope if you have, otherwise use null/undefined to automagically obtain scope. Pass in empty string '' skip (no scope).
+ * @param line The caller's line in the code. Only valid if you pass in scope.
+ * @param position The caller's position in the line. Only valid if you pass in scope and line.
  * @param logger A debugger to use.
  * @param args Arguments to be passed to the debugger.
  */
 const debugWithScope = (
     scope: string | undefined | null,
+    line: number | undefined | null,
+    position: number | undefined | null,
     logger: Debugger,
     ...args: unknown[]
 ) => {
-    const gotScope = scope ?? callerCallsite({ depth: 0 })?.scope
+    let gotScope = scope
+    let gotLine = line
+    let gotPosition = position
+    let callsite: ReturnType<typeof callerCallsite> = null
+    if (!scope) {
+        callsite = callerCallsite({ depth: 0 })
+        gotScope = callsite?.scope
+        gotLine = callsite?.line
+        gotPosition = callsite?.position
+    }
 
     // if scope is empty string, undefined, or null
     // log without the need to switch the scope
@@ -294,9 +313,22 @@ const debugWithScope = (
     // is because the debugger instance is shared by all scopes in the same namespace
     // so we switch it only for calling the debugger, and restore after
     logger.scope = gotScope
-    const d = logger(...args)
+    let lineAndPosition = ''
+    lineAndPosition = `${lineAndPosition}${
+        typeof gotLine === 'number' ? `L${gotLine}` : ''
+    }`
+    lineAndPosition = `${lineAndPosition}${
+        typeof gotPosition === 'number' ? `:${gotPosition}` : ''
+    }`
+
+    let debug: ReturnType<typeof logger>
+    if (lineAndPosition.length > 0) {
+        debug = logger(lineAndPosition, ...args)
+    } else {
+        debug = logger(...args)
+    }
     logger.scope = null
-    return d
+    return debug
 }
 
 /**
@@ -361,9 +393,20 @@ export const Log = (fileName?: string) => {
                 // if there are 2, and both are primitives
                 (args.length === 2 && isPrimitive(args[0]) && isPrimitive(args[1]))
             ) {
-                const scope = callerCallsite({ depth: 0 })?.scope
-                debugWithScope(scope || '', debugStdOut, ...args)
-                LogBase._runHooks('logVerbose', debugStdOut.enabled, scope, args)
+                const callsite = callerCallsite({ depth: 0 })
+                debugWithScope(
+                    callsite?.scope || '',
+                    callsite?.line,
+                    callsite?.position,
+                    debugStdOut,
+                    ...args,
+                )
+                LogBase._runHooks(
+                    'logVerbose',
+                    debugStdOut.enabled,
+                    callsite?.scope,
+                    args,
+                )
                 return
             }
 
@@ -406,12 +449,18 @@ export const Log = (fileName?: string) => {
                 finalMessage += `Verbose debugger available for: ${message}`
             }
 
-            const scope = callerCallsite({ depth: 0 })?.scope
-            debugWithScope(scope || '', debugStdOut, finalMessage)
+            const callsite = callerCallsite({ depth: 0 })
+            debugWithScope(
+                callsite?.scope || '',
+                callsite?.line,
+                callsite?.position,
+                debugStdOut,
+                finalMessage,
+            )
             LogBase._runHooks(
                 'logVerbose',
                 debugStdOut.enabled,
-                scope,
+                callsite?.scope,
                 copiedArgs || args,
             )
             return
@@ -433,16 +482,18 @@ export const Log = (fileName?: string) => {
 
     const logFatal: Debugger = Object.assign(
         (...args: [arg: unknown, ...args: unknown[]]) => {
-            const scope = callerCallsite({ depth: 0 })?.scope
+            const callsite = callerCallsite({ depth: 0 })
             debugWithScope(
-                scope || '',
+                callsite?.scope || '',
+                callsite?.line,
+                callsite?.position,
                 debugStdErrFatal,
                 '\x1b[31m',
                 'FATAL:',
                 ...args,
                 '\u001B[0m',
             )
-            LogBase._runHooks('logFatal', debugStdErrFatal.enabled, scope, args)
+            LogBase._runHooks('logFatal', debugStdErrFatal.enabled, callsite?.scope, args)
         },
         debugStdErrFatal,
     )

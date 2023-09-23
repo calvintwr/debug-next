@@ -9,6 +9,9 @@ process.env.DEBUG_COLORS = 'false'
 import { formatWithOptions } from 'util'
 import { debug, Log, LogBase } from './index'
 
+const { log } = Log()
+log(111111)
+
 const should = it
 
 // internally, debug calls formatWithOptions that collapses all args
@@ -488,9 +491,9 @@ describe('Log', () => {
 
         scoped()
 
-        expect(spy).toBeCalledWith(
-            expect.stringContaining(`${NAMESPACE} [scoped] output from scoped`),
-        )
+        expect(spy).toBeCalledWith(expect.stringContaining(`${NAMESPACE} [scoped]`))
+        // in-between these 2 are the line and position, don't want to test that.
+        expect(spy).toBeCalledWith(expect.stringContaining(`output from scoped`))
         spy.mockRestore()
     })
 })
