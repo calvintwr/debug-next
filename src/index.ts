@@ -1,9 +1,10 @@
 import debug from 'debug'
 import { relative } from 'path'
-import { cleanInspectOpts } from './helpers/cleanInspectOpts'
-import { isPrimitive } from './helpers/isPrimitive'
 import { formatWithOptions } from 'util'
 import { callerCallsite } from './helpers/callerCallsite'
+import { cleanInspectOpts } from './helpers/cleanInspectOpts'
+import { isBunRuntime } from './helpers/isBunRuntime'
+import { isPrimitive } from './helpers/isPrimitive'
 import { Debugger } from './types/debug/debug.types'
 
 // TODO: Figure deprecation later
@@ -257,6 +258,9 @@ const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
 
         // get callsite, run debug, and hooks afterwards.
         const callsite = callerCallsite({ depth: 0 })
+        // set the namespace to the callersite file for bun runtime
+        if (isBunRuntime && callsite?.file)
+            debugInstance.namespace = LogBase.namespace(callsite.file)
         debugWithScope(
             callsite?.scope || '',
             callsite?.line,
@@ -340,7 +344,7 @@ export const Log = (fileName?: string) => {
     const debugStdOut = createLogger(fileName)
 
     // setting the default value to true for bun runtime
-    if (debugStdOut.enabled === undefined) debugStdOut.enabled = true
+    debugStdOut.enabled = true
 
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace) as Debugger

@@ -1,4 +1,5 @@
 import { debug } from '../index'
+import { isBunRuntime } from './isBunRuntime'
 
 const debugtsLogger = debug('debugts')
 
@@ -112,18 +113,21 @@ export function callerCallsite({ depth = 0 } = {}) {
                 callers.unshift(callSite)
             }
 
-            // process.versions.bun only exists in bun runtime
-            const isBunRuntime = !!process.versions.bun
-            const hasReceiver = isBunRuntime
-                ? (i + 1 === callSites.length && !!fileName) || // if this is the last caller, use its fileName.
-                  !callSites[i + 1]?.getFileName() // after the last caller, the filename is empty in bun runtime.
-                : callSite.getTypeName() !== null && fileName !== null && fileName !== ''
+            // skip the first function in bun runtime (callerCallsite)
+            if (isBunRuntime && i === 0) continue
+
+            const hasReceiver =
+                isBunRuntime && !!fileName
+                    ? callSite.getFunctionName() !== '' // takes the first non-empty function which is where the log should be in
+                    : callSite.getTypeName() !== null
 
             if (hasReceiver) {
-                result.scope = callers[depth].getFunctionName() || null // bun returns an empty string, falling back to null for empty state
-                result.file = callers[depth].getFileName()
-                result.line = callers[depth].getLineNumber()
-                result.position = callers[depth].getColumnNumber()
+                // get all info from the callSite for bun runtime
+                const caller = isBunRuntime ? callSite : callers[depth]
+                result.scope = caller.getFunctionName() || null // bun returns an empty string, falling back to null for empty state
+                result.file = caller.getFileName()
+                result.line = caller.getLineNumber()
+                result.position = caller.getColumnNumber()
 
                 return result
             }
