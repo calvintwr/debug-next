@@ -74,7 +74,7 @@ export interface CallSite {
  * See npm callsites
  * @returns
  */
-const callsites = (): CallSite[] => {
+const getCallSites = (): CallSite[] => {
     const _prepareStackTrace = Error.prepareStackTrace
     Error.prepareStackTrace = (_, stack) => stack
     const stack = new Error().stack?.slice(1)
@@ -102,14 +102,22 @@ export function callerCallsite({ depth = 0 } = {}) {
     }
 
     try {
-        for (const callsite of callsites()) {
-            const fileName = callsite.getFileName()
-            const hasReceiver = callsite.getTypeName() !== null && fileName !== null
+        const callSites = getCallSites()
+        for (let i = 0; i < callSites.length; i++) {
+            const callSite = callSites[i]
+            const fileName = callSite.getFileName()
 
             if (!callerFileSet.has(fileName)) {
                 callerFileSet.add(fileName)
-                callers.unshift(callsite)
+                callers.unshift(callSite)
             }
+
+            // process.versions.bun only exists in bun runtime
+            const isBunRuntime = !!process.versions.bun
+            const hasReceiver = isBunRuntime
+                ? (i + 1 === callSites.length && !!fileName) || // if this is the last caller, use its fileName.
+                  !callSites[i + 1]?.getFileName() // after the last caller, the filename is empty in bun runtime.
+                : callSite.getTypeName() !== null && fileName !== null && fileName !== ''
 
             if (hasReceiver) {
                 result.scope = callers[depth].getFunctionName()
