@@ -120,7 +120,7 @@ export function callerCallsite({ depth = 0 } = {}) {
                 : callSite.getTypeName() !== null && fileName !== null && fileName !== ''
 
             if (hasReceiver) {
-                result.scope = callers[depth].getFunctionName()
+                result.scope = callers[depth].getFunctionName() || null // bun returns an empty string, falling back to null for empty state
                 result.file = callers[depth].getFileName()
                 result.line = callers[depth].getLineNumber()
                 result.position = callers[depth].getColumnNumber()

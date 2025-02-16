@@ -339,6 +339,9 @@ export const Log = (fileName?: string) => {
     // create a debugger that logs to normal logs
     const debugStdOut = createLogger(fileName)
 
+    // setting the default value to true for bun runtime
+    if (debugStdOut.enabled === undefined) debugStdOut.enabled = true
+
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace) as Debugger
     // force debug to be enabled despite namespacing
