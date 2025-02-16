@@ -14,6 +14,8 @@ log(111111)
 
 const isBunRuntime = !!process.versions.bun
 
+// bun test APIs behave differently from jest
+// using this helper function to assert called strings
 const expectSpyToBeCalledWithString = (spy: jest.SpyInstance, string: string) => {
     if (isBunRuntime) {
         expect(spy).toMatchSnapshot(string)
