@@ -3,7 +3,6 @@ import { relative } from 'path'
 import { formatWithOptions } from 'util'
 import { callerCallsite } from './helpers/callerCallsite'
 import { cleanInspectOpts } from './helpers/cleanInspectOpts'
-import { isBunRuntime } from './helpers/isBunRuntime'
 import { isPrimitive } from './helpers/isPrimitive'
 import { Debugger } from './types/debug/debug.types'
 
@@ -259,7 +258,7 @@ const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
         // get callsite, run debug, and hooks afterwards.
         const callsite = callerCallsite({ depth: 0 })
         // set the namespace to the callersite file for bun runtime
-        if (isBunRuntime && callsite?.file)
+        if (!!process.versions.bun && callsite?.file)
             debugInstance.namespace = LogBase.namespace(callsite.file)
         debugWithScope(
             callsite?.scope || '',
@@ -344,7 +343,7 @@ export const Log = (fileName?: string) => {
     const debugStdOut = createLogger(fileName)
 
     // setting the default value to true for bun runtime
-    if (isBunRuntime) debugStdOut.enabled = true
+    if (!!process.versions.bun) debugStdOut.enabled = true
 
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace) as Debugger

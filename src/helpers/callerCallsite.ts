@@ -1,5 +1,4 @@
 import { debug } from '../index'
-import { isBunRuntime } from './isBunRuntime'
 
 const debugtsLogger = debug('debugts')
 
@@ -112,6 +111,8 @@ export function callerCallsite({ depth = 0 } = {}) {
                 callerFileSet.add(fileName)
                 callers.unshift(callSite)
             }
+
+            const isBunRuntime = !!process.versions.bun
 
             // skip the first function in bun runtime (callerCallsite)
             if (isBunRuntime && i === 0) continue
