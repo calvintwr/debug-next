@@ -489,9 +489,9 @@ describe('Log', () => {
 
         scoped()
 
-        expect(spy).toBeCalledWith(expect.stringContaining(`${NAMESPACE} [scoped]`))
+        expectSpyToBeCalledWithString(spy, `${NAMESPACE} [scoped]`)
         // in-between these 2 are the line and position, don't want to test that.
-        expect(spy).toBeCalledWith(expect.stringContaining(`output from scoped`))
+        expectSpyToBeCalledWithString(spy, `output from scoped`)
         spy.mockRestore()
     })
 })

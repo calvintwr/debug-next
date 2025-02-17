@@ -344,7 +344,7 @@ export const Log = (fileName?: string) => {
     const debugStdOut = createLogger(fileName)
 
     // setting the default value to true for bun runtime
-    debugStdOut.enabled = true
+    if (isBunRuntime) debugStdOut.enabled = true
 
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace) as Debugger
