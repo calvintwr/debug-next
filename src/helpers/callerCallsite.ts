@@ -119,7 +119,7 @@ export function callerCallsite({ depth = 0 } = {}) {
 
             const hasReceiver =
                 isBunRuntime && !!fileName
-                    ? !fileName.includes('debug-next/src/index') // takes the first function outside of debug-next
+                    ? !fileName.includes('node_modules') // takes the first function outside of node_modules
                     : callSite.getTypeName() !== null
 
             if (hasReceiver) {
