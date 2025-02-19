@@ -36,7 +36,7 @@ type TDebuggers = 'log' | 'logWarn' | 'logDebug' | 'logVerbose' | 'logError' | '
 type THooksObject = { [Key in TDebuggers]: THookMap }
 
 export const LogBase = {
-    appName: 'debug',
+    appName: process.env.DEBUG_APP_NAME ?? 'debug',
     baseDir: '',
     truncateDir: ['src/', 'dist/'],
     namespace(fileName: string) {
