@@ -119,7 +119,7 @@ export function callerCallsite({ depth = 0 } = {}) {
 
             const hasReceiver =
                 isBunRuntime && !!fileName
-                    ? callSite.getFunctionName() !== '' // takes the first non-empty function which is where the log should be in
+                    ? !fileName.includes('debug-next/src/index') // takes the first function outside of debug-next
                     : callSite.getTypeName() !== null
 
             if (hasReceiver) {

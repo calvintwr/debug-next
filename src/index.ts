@@ -257,9 +257,6 @@ const _createDebugger = (name: TDebuggers, debugInstance: Debugger) => {
 
         // get callsite, run debug, and hooks afterwards.
         const callsite = callerCallsite({ depth: 0 })
-        // set the namespace to the callersite file for bun runtime
-        if (!!process.versions.bun && callsite?.file)
-            debugInstance.namespace = LogBase.namespace(callsite.file)
         debugWithScope(
             callsite?.scope || '',
             callsite?.line,
@@ -341,9 +338,6 @@ const debugWithScope = (
 export const Log = (fileName?: string) => {
     // create a debugger that logs to normal logs
     const debugStdOut = createLogger(fileName)
-
-    // setting the default value to true for bun runtime
-    if (!!process.versions.bun) debugStdOut.enabled = true
 
     // create a debugger that logs to error logs (default behaviour of the debug module)
     const debugStdErr = debug(debugStdOut.namespace) as Debugger
