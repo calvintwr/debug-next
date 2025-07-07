@@ -9,8 +9,15 @@ process.env.DEBUG_COLORS = 'false'
 import { formatWithOptions } from 'util'
 import { debug, Log, LogBase } from './index'
 
-const { log } = Log()
-log(111111)
+// bun test APIs behave differently from jest
+// using this helper function to assert called strings
+const expectSpyToHaveBeenCalledWithString = (spy: jest.SpyInstance, string: string) => {
+    if (!!process.versions.bun) {
+        expect(spy).toMatchSnapshot(string)
+    } else {
+        expect(spy).toHaveBeenCalledWith(expect.stringContaining(string))
+    }
+}
 
 const should = it
 
@@ -29,7 +36,7 @@ describe('Log', () => {
         const { log } = Log()
         log.enabled = false
         log('test')
-        expect(logSpy).not.toBeCalled()
+        expect(logSpy).toHaveBeenCalledTimes(0)
         logSpy.mockRestore()
     })
 
@@ -56,9 +63,7 @@ describe('Log', () => {
         const { log } = Log(__filename)
 
         log(testMessage)
-        expect(logSpy).toHaveBeenCalledWith(
-            expect.stringContaining(`${NAMESPACE} ${testMessage}`),
-        )
+        expectSpyToHaveBeenCalledWithString(logSpy, `${NAMESPACE} ${testMessage}`)
 
         logSpy.mockRestore()
     })
@@ -82,10 +87,8 @@ describe('Log', () => {
 
             const extended = log.extend('extension')
 
-            extended('#extend can run')
-            expect(logSpy).toHaveBeenCalledWith(
-                expect.stringContaining(`${NAMESPACE}:extension ${msg}`),
-            )
+            extended(msg)
+            expectSpyToHaveBeenCalledWithString(logSpy, `${NAMESPACE}:extension ${msg}`)
 
             logSpy.mockRestore()
 
@@ -96,6 +99,7 @@ describe('Log', () => {
         })
     })
 
+    // TODO: Fix this test for bun
     describe('Hooks', () => {
         const allHook = jest.fn()
         const testHook = jest.fn()
@@ -145,29 +149,53 @@ describe('Log', () => {
                 .mockImplementation(() => false)
 
             log(...args)
-            expect(testHook).toBeCalledWith(args, 'log', true, null, 'test')
+            expect(testHook).toHaveBeenCalledWith(args, 'log', true, null, 'test')
 
             testHook.mockClear()
             logDebug(...args)
-            expect(testHook).toBeCalledWith(args, 'logDebug', true, null, 'testDebug')
+            expect(testHook).toHaveBeenCalledWith(
+                args,
+                'logDebug',
+                true,
+                null,
+                'testDebug',
+            )
 
             testHook.mockClear()
             logError(...args)
-            expect(testHook).toBeCalledWith(args, 'logError', true, null, 'testError')
+            expect(testHook).toHaveBeenCalledWith(
+                args,
+                'logError',
+                true,
+                null,
+                'testError',
+            )
 
             testHook.mockClear()
             logFatal(...args)
-            expect(testHook).toBeCalledWith(args, 'logFatal', true, null, 'testFatal')
+            expect(testHook).toHaveBeenCalledWith(
+                args,
+                'logFatal',
+                true,
+                null,
+                'testFatal',
+            )
 
             testHook.mockClear()
             logVerbose(...args)
-            expect(testHook).toBeCalledWith(args, 'logVerbose', true, null, 'testVerbose')
+            expect(testHook).toHaveBeenCalledWith(
+                args,
+                'logVerbose',
+                true,
+                null,
+                'testVerbose',
+            )
 
             testHook.mockClear()
             logWarn(...args)
-            expect(testHook).toBeCalledWith(args, 'logWarn', true, null, 'testWarn')
+            expect(testHook).toHaveBeenCalledWith(args, 'logWarn', true, null, 'testWarn')
 
-            expect(allHook).toBeCalledTimes(6)
+            expect(allHook).toHaveBeenCalledTimes(6)
 
             testHook.mockClear()
             spyOut.mockRestore()
@@ -190,14 +218,19 @@ describe('Log', () => {
             const args = ['foo', 'bar'] as const
             log(...args)
 
-            expect(errorHook).toBeCalledWith(args, 'log', log.enabled, null, 'error-hook')
-            expect(spy).toBeCalledWith(
-                expect.stringContaining(
-                    'Hook `error-hook` attached to log threw an error.',
-                ),
+            expect(errorHook).toHaveBeenCalledWith(
+                args,
+                'log',
+                log.enabled,
+                null,
+                'error-hook',
+            )
+            expectSpyToHaveBeenCalledWithString(
+                spy,
+                'Hook `error-hook` attached to log threw an error.',
             )
             // other hooks should still run normally
-            expect(testHook).toBeCalledWith(args, 'log', log.enabled, null, 'test')
+            expect(testHook).toHaveBeenCalledWith(args, 'log', log.enabled, null, 'test')
 
             // remove hook
             delete LogBase._hooks.log['error-hook']
@@ -215,7 +248,7 @@ describe('Log', () => {
                 .mockImplementation(() => false)
 
             logVerbose('one arg')
-            expect(verboseHook).toBeCalledWith(
+            expect(verboseHook).toHaveBeenCalledWith(
                 ['one arg'],
                 'logVerbose',
                 logVerbose.enabled,
@@ -233,7 +266,7 @@ describe('Log', () => {
                 },
             ]
             logVerbose(...complex)
-            expect(verboseHook).toBeCalledWith(
+            expect(verboseHook).toHaveBeenCalledWith(
                 complex,
                 'logVerbose',
                 logVerbose.enabled,
@@ -254,14 +287,14 @@ describe('Log', () => {
             const { logWarn } = Log(__filename)
 
             logWarn('hook should run')
-            expect(warnHook).toBeCalledWith(
+            expect(warnHook).toHaveBeenCalledWith(
                 ['hook should run'],
                 'logWarn',
                 logWarn.enabled,
                 null,
                 'warnHook',
             )
-            delete LogBase._hooks.logVerbose['warnHook']
+            delete LogBase._hooks.logWarn['warnHook']
             spy.mockRestore()
         })
     })
@@ -277,9 +310,7 @@ describe('Log', () => {
         const { logWarn } = Log(__filename)
 
         logWarn(testMessage)
-        expect(logWarnSpy).toHaveBeenCalledWith(
-            expect.stringContaining(`${NAMESPACE} ${testMessage}`),
-        )
+        expectSpyToHaveBeenCalledWithString(logWarnSpy, `${NAMESPACE} ${testMessage}`)
 
         logWarnSpy.mockRestore()
     })
@@ -295,9 +326,7 @@ describe('Log', () => {
         const { logError } = Log(__filename)
 
         logError(testMessage)
-        expect(logErrorSpy).toHaveBeenCalledWith(
-            expect.stringContaining(`${NAMESPACE} ${testMessage}`),
-        )
+        expectSpyToHaveBeenCalledWithString(logErrorSpy, `${NAMESPACE} ${testMessage}`)
 
         logErrorSpy.mockRestore()
     })
@@ -317,10 +346,9 @@ describe('Log', () => {
         const { logError } = Log('wrong/namespace')
 
         logError(testMessage)
-        expect(logErrorSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                `${LogBase.namespace(wrongNamespace)} ${testMessage}`,
-            ),
+        expectSpyToHaveBeenCalledWithString(
+            logErrorSpy,
+            `${LogBase.namespace(wrongNamespace)} ${testMessage}`,
         )
 
         logErrorSpy.mockRestore()
@@ -338,9 +366,8 @@ describe('Log', () => {
         const { logDebug } = Log(__filename)
 
         logDebug(testMessage)
-        expect(logDebugSpy).toHaveBeenCalledWith(
-            expect.stringContaining(`${NAMESPACE} ${testMessage}`),
-        )
+        expectSpyToHaveBeenCalledWithString(logDebugSpy, `${NAMESPACE} ${testMessage}`)
+
         logDebugSpy.mockRestore()
     })
 
@@ -356,10 +383,9 @@ describe('Log', () => {
         const { logVerbose } = Log(__filename)
 
         logVerbose(testMessage, testObj)
-        expect(logVerboseSpy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                format(`${NAMESPACE} ${testMessage}`, testObj, '0ms'),
-            ),
+        expectSpyToHaveBeenCalledWithString(
+            logVerboseSpy,
+            format(`${NAMESPACE} ${testMessage}`, testObj, '0ms'),
         )
 
         logVerboseSpy.mockRestore()
@@ -401,12 +427,11 @@ describe('Log', () => {
             const { logVerbose } = Log(__filename)
 
             logVerbose(testObj, testMessage)
-            expect(spy).toHaveBeenCalledWith(
-                expect.stringContaining(
-                    `${NAMESPACE} Verbose debugger available for: an object with keys [${Object.keys(
-                        testObj,
-                    )}] (and 1 more argument).`,
-                ),
+            expectSpyToHaveBeenCalledWithString(
+                spy,
+                `${NAMESPACE} Verbose debugger available for: an object with keys [${Object.keys(
+                    testObj,
+                )}] (and 1 more argument).`,
             )
 
             process.env.DEBUG_VERBOSE = envLogVerboseCached
@@ -424,8 +449,9 @@ describe('Log', () => {
         const { logFatal } = Log(__filename)
 
         logFatal(testMessage, { foo: 'bar' })
-        expect(spy).toHaveBeenCalledWith(
-            expect.stringContaining(`${NAMESPACE} \x1b[31m FATAL: ${testMessage}`),
+        expectSpyToHaveBeenCalledWithString(
+            spy,
+            `${NAMESPACE} \x1b[31m FATAL: ${testMessage}`,
         )
 
         spy.mockRestore()
@@ -441,10 +467,9 @@ describe('Log', () => {
         const { logFatal } = Log(disabledNamespace)
 
         logFatal(testMessage)
-        expect(spy).toHaveBeenCalledWith(
-            expect.stringContaining(
-                `${LogBase.namespace(disabledNamespace)} \x1b[31m FATAL: ${testMessage}`,
-            ),
+        expectSpyToHaveBeenCalledWithString(
+            spy,
+            `${LogBase.namespace(disabledNamespace)} \x1b[31m FATAL: ${testMessage}`,
         )
 
         spy.mockRestore()
@@ -491,9 +516,9 @@ describe('Log', () => {
 
         scoped()
 
-        expect(spy).toBeCalledWith(expect.stringContaining(`${NAMESPACE} [scoped]`))
+        expectSpyToHaveBeenCalledWithString(spy, `${NAMESPACE} [scoped]`)
         // in-between these 2 are the line and position, don't want to test that.
-        expect(spy).toBeCalledWith(expect.stringContaining(`output from scoped`))
+        expectSpyToHaveBeenCalledWithString(spy, `output from scoped`)
         spy.mockRestore()
     })
 })

@@ -74,7 +74,7 @@ export interface CallSite {
  * See npm callsites
  * @returns
  */
-const callsites = (): CallSite[] => {
+const getCallSites = (): CallSite[] => {
     const _prepareStackTrace = Error.prepareStackTrace
     Error.prepareStackTrace = (_, stack) => stack
     const stack = new Error().stack?.slice(1)
@@ -102,20 +102,33 @@ export function callerCallsite({ depth = 0 } = {}) {
     }
 
     try {
-        for (const callsite of callsites()) {
-            const fileName = callsite.getFileName()
-            const hasReceiver = callsite.getTypeName() !== null && fileName !== null
+        const callSites = getCallSites()
+        for (let i = 0; i < callSites.length; i++) {
+            const callSite = callSites[i]
+            const fileName = callSite.getFileName()
 
             if (!callerFileSet.has(fileName)) {
                 callerFileSet.add(fileName)
-                callers.unshift(callsite)
+                callers.unshift(callSite)
             }
 
+            const isBunRuntime = !!process.versions.bun
+
+            // skip the first function in bun runtime (callerCallsite)
+            if (isBunRuntime && i === 0) continue
+
+            const hasReceiver =
+                isBunRuntime && !!fileName
+                    ? !fileName.includes('node_modules') // takes the first function outside of node_modules
+                    : callSite.getTypeName() !== null
+
             if (hasReceiver) {
-                result.scope = callers[depth].getFunctionName()
-                result.file = callers[depth].getFileName()
-                result.line = callers[depth].getLineNumber()
-                result.position = callers[depth].getColumnNumber()
+                // get all info from the callSite for bun runtime
+                const caller = isBunRuntime ? callSite : callers[depth]
+                result.scope = caller.getFunctionName() || null // bun returns an empty string, falling back to null for empty state
+                result.file = caller.getFileName()
+                result.line = caller.getLineNumber()
+                result.position = caller.getColumnNumber()
 
                 return result
             }

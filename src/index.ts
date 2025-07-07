@@ -1,9 +1,9 @@
 import debug from 'debug'
 import { relative } from 'path'
-import { cleanInspectOpts } from './helpers/cleanInspectOpts'
-import { isPrimitive } from './helpers/isPrimitive'
 import { formatWithOptions } from 'util'
 import { callerCallsite } from './helpers/callerCallsite'
+import { cleanInspectOpts } from './helpers/cleanInspectOpts'
+import { isPrimitive } from './helpers/isPrimitive'
 import { Debugger } from './types/debug/debug.types'
 
 // TODO: Figure deprecation later
@@ -36,7 +36,7 @@ type TDebuggers = 'log' | 'logWarn' | 'logDebug' | 'logVerbose' | 'logError' | '
 type THooksObject = { [Key in TDebuggers]: THookMap }
 
 export const LogBase = {
-    appName: 'debug',
+    appName: process.env.DEBUG_APP_NAME ?? 'debug',
     baseDir: '',
     truncateDir: ['src/', 'dist/'],
     namespace(fileName: string) {
