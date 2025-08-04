@@ -215,6 +215,73 @@ Occassionally, you would want to only turn on namespaces for latest code changes
 DEBUG=namespace:with:latest-code-changes*
 ```
 
+#### Usage with ES Modules
+
+ES modules - module system is different from commonjs or bun run time.
+ES modules hoists (lift all the imports statements) first before executing any codes. This can result and unexpected bugs if the namespace initialization is not managed carefully.
+
+For example, suppose you have the following files:
+```ts
+/*
+// .env
+DEBUG=my-awesome-app*
+
+.
+└── src
+    ├── index.ts
+    └── routes.ts
+ */
+
+// index.ts
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+import { Log, LogBase } from 'debug-next'
+
+// initialization comes first
+function getDirname(metaUrl: string) {
+  const __filename = fileURLToPath(metaUrl);
+  return dirname(__filename);
+}
+LogBase.init('my-awesome-app', getDirname(import.meta.url)) // <- set the name space here
+
+import './routes'
+
+// routes.ts
+import { Log } from 'debug-next'
+const { log } = Log(import.meta.filename)
+```
+
+Only the log statement from `index.ts` will be printed out to console because, es modules resolve hoist the `import './routes.ts'` line.
+And hence the code inside the `routes.ts` gets executed earlier than LogBase initialization. 
+The namespace for Log inside the `routes.ts` will be default `debug` other than `my-awesome-app`.
+
+To fix this problem, you can segregate the `LogBase` initialization into a separate file and put the import at the top. Look at the below example.
+
+```ts
+/*
+└── src
+    ├── index.ts
+    ├── init-logger.ts
+    └── routes.ts
+*/
+
+// init-logger.ts
+import { LogBase } from "debug-next";
+import { getDirname } from "./lib/getDirname";
+
+// Initialize LogBase
+LogBase.init("my-awesome-app", getDirname(import.meta.url));
+
+// index.ts
+import("./logger"); // <- This must be at the top.
+import('./routes');
+// import other files here
+```
+
+This way, initialization will get executed first as it is the code inside the first import statement.
+
+
 ## Roadmap:
 
 1. Browser compatibility.
