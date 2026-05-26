@@ -125,12 +125,12 @@ export const resetLogFile = (opts: TFileWriterOptions): void => {
     }
 }
 
-const TEE_FLAG = Symbol.for('debug-next/tee-installed')
+const PIPE_FLAG = Symbol.for('debug-next/pipe-to-file-installed')
 const MAX_PENDING_BYTES = 1_048_576 * 5 // 5 MiB
 
-type TWrappedStream = NodeJS.WriteStream & { [TEE_FLAG]?: true }
+type TWrappedStream = NodeJS.WriteStream & { [PIPE_FLAG]?: true }
 
-export type TTeeStdStreamsOptions = TFileWriterOptions & {
+export type TPipeStdStreamsToFileOptions = TFileWriterOptions & {
     /**
      * Truncate `<appName>.log` once at process startup. Defaults to
      * `true`. Idempotent across hot reloads within the same process.
@@ -147,7 +147,7 @@ export type TTeeStdStreamsOptions = TFileWriterOptions & {
  *
  * Idempotent across hot reloads via a symbol on the stream object.
  */
-export const teeStdStreams = (opts: TTeeStdStreamsOptions): void => {
+export const pipeStdStreamsToFile = (opts: TPipeStdStreamsToFileOptions): void => {
     if (isFileWritingDisabled()) return
 
     if (opts.resetOnStart !== false) {
@@ -160,7 +160,7 @@ export const teeStdStreams = (opts: TTeeStdStreamsOptions): void => {
     }
 
     const wrap = (stream: TWrappedStream): void => {
-        if (stream[TEE_FLAG]) return
+        if (stream[PIPE_FLAG]) return
         const original = stream.write.bind(stream)
         // Per-stream buffer holds the trailing partial line until a
         // newline arrives — so we don't stamp the same logical line twice
@@ -205,7 +205,7 @@ export const teeStdStreams = (opts: TTeeStdStreamsOptions): void => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return (original as any)(chunk, ...rest)
         } as typeof stream.write
-        stream[TEE_FLAG] = true
+        stream[PIPE_FLAG] = true
     }
 
     wrap(process.stdout as TWrappedStream)

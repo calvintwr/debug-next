@@ -388,7 +388,7 @@ short-circuits when `NODE_ENV=production`:
 | Surface | Production default |
 |---|---|
 | `attachFileWriter` | `LogBase.init` still runs, but the file-writer hook is not attached |
-| `teeStdStreams` | Returns before wrapping `process.stdout` / `process.stderr` |
+| `pipeStdStreamsToFile` | Returns before wrapping `process.stdout` / `process.stderr` |
 | `createOnRequestError` | `appendRaw` is called but no-ops; Sentry composition still fires |
 | `createDebugNextRoute` POST | **Returns `404`** — the route refuses to parse the body |
 | `registerClientCapture` | Browsers don't install the `window.onerror` / `unhandledrejection` listeners, so no client POSTs are fired |

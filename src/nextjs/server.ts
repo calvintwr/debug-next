@@ -21,13 +21,19 @@ import {
     isFileWritingDisabled,
     resetLogFile,
     resolveLogDir,
-    teeStdStreams,
+    pipeStdStreamsToFile,
     type TFileWriterOptions,
-    type TTeeStdStreamsOptions,
+    type TPipeStdStreamsToFileOptions,
 } from './file-writer'
 
-export { appendRaw, createFileWriterHook, resetLogFile, resolveLogDir, teeStdStreams }
-export type { TFileWriterOptions, TTeeStdStreamsOptions }
+export {
+    appendRaw,
+    createFileWriterHook,
+    resetLogFile,
+    resolveLogDir,
+    pipeStdStreamsToFile,
+}
+export type { TFileWriterOptions, TPipeStdStreamsToFileOptions }
 
 const HOOK_NAME = 'debug-next/fileWriter'
 

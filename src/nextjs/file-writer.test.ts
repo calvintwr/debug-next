@@ -18,7 +18,7 @@ const cleanEnv = () => {
 }
 
 const reloadModule = () => {
-    // Module-level state (filesReset, dirsEnsured, logDirByCwd, TEE_FLAG
+    // Module-level state (filesReset, dirsEnsured, logDirByCwd, PIPE_FLAG
     // on streams) needs to be fresh between tests that exercise it.
     jest.resetModules()
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -178,11 +178,11 @@ describe('createFileWriterHook', () => {
     })
 })
 
-describe('teeStdStreams', () => {
+describe('pipeStdStreamsToFile', () => {
     let logDir: string
     let originalStdout: typeof process.stdout.write
     let originalStderr: typeof process.stderr.write
-    const TEE_FLAG = Symbol.for('debug-next/tee-installed')
+    const PIPE_FLAG = Symbol.for('debug-next/pipe-to-file-installed')
 
     beforeEach(() => {
         cleanEnv()
@@ -190,11 +190,11 @@ describe('teeStdStreams', () => {
         process.env.DEBUG_NEXT_LOG_DIR = logDir
         originalStdout = process.stdout.write
         originalStderr = process.stderr.write
-        // Force-reset the TEE_FLAG so each test starts from a clean wrap.
+        // Force-reset the PIPE_FLAG so each test starts from a clean wrap.
         const out = process.stdout as unknown as Record<symbol, unknown>
         const err = process.stderr as unknown as Record<symbol, unknown>
-        delete out[TEE_FLAG]
-        delete err[TEE_FLAG]
+        delete out[PIPE_FLAG]
+        delete err[PIPE_FLAG]
         // Silence stdout/stderr for the duration of the test — our wrap
         // delegates to whatever `write` was at wrap time, so swapping in a
         // no-op here keeps the file write path live while sparing the
@@ -209,13 +209,13 @@ describe('teeStdStreams', () => {
         process.stderr.write = originalStderr
         const out = process.stdout as unknown as Record<symbol, unknown>
         const err = process.stderr as unknown as Record<symbol, unknown>
-        delete out[TEE_FLAG]
-        delete err[TEE_FLAG]
+        delete out[PIPE_FLAG]
+        delete err[PIPE_FLAG]
     })
 
     it('prepends an ISO timestamp to every complete line', () => {
-        const { teeStdStreams } = reloadModule()
-        teeStdStreams({ appName: 'app' })
+        const { pipeStdStreamsToFile } = reloadModule()
+        pipeStdStreamsToFile({ appName: 'app' })
         process.stdout.write('first line\n')
         process.stdout.write('second line\n')
         const lines = readLog(logDir, 'app').trim().split('\n')
@@ -225,8 +225,8 @@ describe('teeStdStreams', () => {
     })
 
     it('joins a chunked write into one stamped line once the newline arrives', () => {
-        const { teeStdStreams } = reloadModule()
-        teeStdStreams({ appName: 'app' })
+        const { pipeStdStreamsToFile } = reloadModule()
+        pipeStdStreamsToFile({ appName: 'app' })
         // Two writes split mid-line — should appear as a single stamped
         // line, not two. (We can't reliably check that nothing was
         // flushed between the writes because Jest's reporter shares the
@@ -240,8 +240,8 @@ describe('teeStdStreams', () => {
     })
 
     it('force-flushes an oversized partial line so pending cannot grow without bound', () => {
-        const { teeStdStreams } = reloadModule()
-        teeStdStreams({ appName: 'app' })
+        const { pipeStdStreamsToFile } = reloadModule()
+        pipeStdStreamsToFile({ appName: 'app' })
         // 6 MB of newline-free output exceeds the 5 MB MAX_PENDING_BYTES cap.
         process.stdout.write('x'.repeat(6 * 1024 * 1024))
         const stat = fs.statSync(path.join(logDir, 'app.log'))
@@ -249,9 +249,9 @@ describe('teeStdStreams', () => {
     })
 
     it('is idempotent — calling twice in one process does not double-wrap', () => {
-        const { teeStdStreams } = reloadModule()
-        teeStdStreams({ appName: 'app' })
-        teeStdStreams({ appName: 'app' })
+        const { pipeStdStreamsToFile } = reloadModule()
+        pipeStdStreamsToFile({ appName: 'app' })
+        pipeStdStreamsToFile({ appName: 'app' })
         process.stdout.write('once\n')
         const out = readLog(logDir, 'app')
         // If double-wrapped, we'd see two timestamped copies of "once".
@@ -260,8 +260,8 @@ describe('teeStdStreams', () => {
 
     it('no-ops in production without DEBUG_NEXT_FORCE', () => {
         process.env.NODE_ENV = 'production'
-        const { teeStdStreams } = reloadModule()
-        teeStdStreams({ appName: 'app' })
+        const { pipeStdStreamsToFile } = reloadModule()
+        pipeStdStreamsToFile({ appName: 'app' })
         process.stdout.write('should not be teed\n')
         expect(fs.existsSync(path.join(logDir, 'app.log'))).toBe(false)
     })
