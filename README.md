@@ -272,7 +272,7 @@ registerClientCapture({ appName: 'my-app' })
 ### 3. Receiving endpoint — `app/api/_debug-next/route.ts`
 
 ```ts
-// src/app/api/_debug-next/route.ts
+// app/api/_debug-next/route.ts (or src/app/... with the src/ layout)
 import { createDebugNextRoute } from 'debug-next/nextjs/route'
 
 export const runtime = 'nodejs'
@@ -280,6 +280,16 @@ export const dynamic = 'force-dynamic'
 
 export const { POST } = createDebugNextRoute({ appName: 'my-app' })
 ```
+
+> ⚠️ **Do not enable this endpoint in production.** It's an
+> unauthenticated POST handler (it has to be — the browser fires
+> `window.onerror` without credentials), writes attacker-controllable
+> text into a file your AI session reads, and serves no durable purpose
+> outside the dev loop. The handler short-circuits to `404` whenever
+> `NODE_ENV=production` (unless you opt in with `DEBUG_NEXT_FORCE=true`,
+> which you almost certainly shouldn't). Sentry is the right durable
+> sink for production client errors. See the [Production](#production)
+> section below.
 
 ### 4. React render boundary — `global-error.tsx` (optional)
 
@@ -369,6 +379,36 @@ attachFileWriter({ appName: 'my-app', resetOnStart: false })
 | `DEBUG_NEXT_FORCE` | unset | Required to enable file writes when `NODE_ENV=production` (disk logging is off by default in prod) |
 
 Add `.debug-next/` to your `.gitignore`.
+
+### Production
+
+`debug-next/nextjs` is a **dev-loop tool**. Every write surface
+short-circuits when `NODE_ENV=production`:
+
+| Surface | Production default |
+|---|---|
+| `attachFileWriter` | `LogBase.init` still runs, but the file-writer hook is not attached |
+| `teeStdStreams` | Returns before wrapping `process.stdout` / `process.stderr` |
+| `createOnRequestError` | `appendRaw` is called but no-ops; Sentry composition still fires |
+| `createDebugNextRoute` POST | **Returns `404`** — the route refuses to parse the body |
+| `registerClientCapture` | Browsers don't install the `window.onerror` / `unhandledrejection` listeners, so no client POSTs are fired |
+
+The `DEBUG_NEXT_FORCE=true` env var re-enables all of the above for
+self-hosted servers that genuinely want disk logs in prod, but think
+hard before flipping it. In particular **never enable the route
+handler in production**:
+
+- The endpoint is unauthenticated (the browser can't send credentials
+  for `window.onerror`).
+- It writes attacker-controlled text into a file the AI copilot reads,
+  which is a prompt-injection vector even with the newline / control-char
+  sanitization applied to incoming fields.
+- On Vercel / serverless, the filesystem is read-only or ephemeral, so
+  the writes silently fail anyway.
+- On self-hosted servers, the file grows without bound — there's no
+  rotation.
+
+Sentry is the right durable sink for production client errors.
 
 ## Roadmap:
 
