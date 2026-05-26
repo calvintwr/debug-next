@@ -39,7 +39,7 @@
         "lint": "yarn lint:build && yarn lint:ci",
         "lint:build": "tsc --project tsconfig.build.json --noEmit",
         "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-        "build": "tsc --project tsconfig.build.json && chmod +x ./dist/bin/debug-next-dev.js || true",
+        "build": "tsc --project tsconfig.build.json && node ./scripts/postbuild.js",
         "prepublishOnly": "yarn lint:ci && yarn build",
         "tsc": "tsc"
     },

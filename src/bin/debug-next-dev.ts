@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * CLI wrapper for `next dev` (or any long-running build command). Pipes
  * the child process's stdout/stderr output to `<appName>.log` so the
