@@ -1,12 +1,33 @@
 {
     "name": "debug-next",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "A feature-enhanced TypeScript drop-in replacement for a very popular and simple-to-use debug module.",
     "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js",
+        "./nextjs": "./dist/nextjs/server.js",
+        "./nextjs/client": "./dist/nextjs/client.js",
+        "./nextjs/route": "./dist/nextjs/route.js",
+        "./nextjs/*": "./dist/nextjs/*.js",
+        "./dist/*": "./dist/*",
+        "./package.json": "./package.json"
+    },
+    "typesVersions": {
+        "*": {
+            "nextjs": ["./dist/nextjs/server.d.ts"],
+            "nextjs/client": ["./dist/nextjs/client.d.ts"],
+            "nextjs/route": ["./dist/nextjs/route.d.ts"]
+        }
+    },
+    "bin": {
+        "debug-next-dev": "./dist/bin/debug-next-dev.js"
+    },
     "keywords": [
         "debug",
         "log",
-        "debugger"
+        "debugger",
+        "nextjs"
     ],
     "files": [
         "dist",
@@ -18,7 +39,7 @@
         "lint": "yarn lint:build && yarn lint:ci",
         "lint:build": "tsc --project tsconfig.build.json --noEmit",
         "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-        "build": "tsc --project tsconfig.build.json",
+        "build": "tsc --project tsconfig.build.json && chmod +x ./dist/bin/debug-next-dev.js || true",
         "prepublishOnly": "yarn lint:ci && yarn build",
         "tsc": "tsc"
     },

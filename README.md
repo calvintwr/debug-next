@@ -215,8 +215,161 @@ Occassionally, you would want to only turn on namespaces for latest code changes
 DEBUG=namespace:with:latest-code-changes*
 ```
 
+## Next.js
+
+`debug-next/nextjs` captures errors from every Next.js error surface
+(server runtime, client runtime, React render boundary, dev-server
+output) and writes them verbatim to `<repo-root>/.debug-next/<appName>.log`.
+The file is a faithful mirror of what scrolls by in the developer's
+terminal — same format, same content, ANSI codes stripped. The AI
+copilot reads the file the same way it would read the terminal.
+
+### Install
+
+```bash
+npm install --save debug-next
+# or
+yarn add debug-next
+# or
+bun add debug-next
+```
+
+### 1. Server runtime — `instrumentation.ts`
+
+Hook the LogBase file-writer on Node startup and replace `onRequestError`
+with one that persists to the log file. Composes with Sentry if present:
+
+```ts
+// src/instrumentation.ts
+import * as Sentry from '@sentry/nextjs'
+import { attachFileWriter, createOnRequestError } from 'debug-next/nextjs'
+
+export async function register() {
+    if (process.env.NEXT_RUNTIME === 'nodejs') {
+        await import('../sentry.server.config') // if you use Sentry
+        attachFileWriter({ appName: 'my-app' })
+    }
+}
+
+export const onRequestError = createOnRequestError({
+    appName: 'my-app',
+    sentry: Sentry.captureRequestError, // optional
+})
+```
+
+### 2. Client runtime — `instrumentation-client.ts`
+
+Install `window.onerror` and `unhandledrejection` listeners that POST to
+the route handler set up in step 3:
+
+```ts
+// src/instrumentation-client.ts
+import { registerClientCapture } from 'debug-next/nextjs/client'
+
+registerClientCapture({ appName: 'my-app' })
+```
+
+### 3. Receiving endpoint — `app/api/_debug-next/route.ts`
+
+```ts
+// src/app/api/_debug-next/route.ts
+import { createDebugNextRoute } from 'debug-next/nextjs/route'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export const { POST } = createDebugNextRoute({ appName: 'my-app' })
+```
+
+### 4. React render boundary — `global-error.tsx` (optional)
+
+```tsx
+// app/global-error.tsx (or src/app/global-error.tsx if using the src/ layout)
+'use client'
+import { reportClientEvent } from 'debug-next/nextjs/client'
+import { useEffect } from 'react'
+
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+    useEffect(() => {
+        reportClientEvent('/api/_debug-next', {
+            appName: 'my-app',
+            source: 'global-error',
+            message: error.message,
+            stack: error.stack,
+            digest: error.digest,
+        })
+    }, [error])
+    // ...render fallback
+}
+```
+
+### 5. Dev-server build errors — `package.json`
+
+Wrap the dev command with `debug-next-dev` to capture Turbopack/webpack
+compile errors:
+
+```jsonc
+{
+    "scripts": {
+        "dev": "debug-next-dev -- next dev"
+    }
+}
+```
+
+### Log output
+
+Raw stream at `<repo-root>/.debug-next/<appName>.log`. The CLI tees the
+wrapped command's stdout/stderr verbatim. `LogBase` hooks and
+synthesized events (Next.js `onRequestError`, client error reports) emit
+terminal-style lines into the same file:
+
+```
+[2026-05-26T10:33:21.482Z] [debug-next-dev] wrapping: next dev
+  ✓ Ready in 2.1s
+[2026-05-26T10:33:22.001Z] [my-app] log src:workers:init: Worker started
+[2026-05-26T10:33:25.910Z] [my-app] logError handleCheckout: Snag: Stripe charge failed
+    at handleCheckout (/app/api/checkout/route.ts:42:15)
+    at ... {
+  breadcrumbs: [ { stage: 'checkout' }, { userId: 'u_123' } ],
+  info: { amount: 4200, currency: 'usd' }
+}
+[2026-05-26T10:33:26.013Z] [my-app] logError route — POST /api/checkout
+Error: Stripe charge failed
+    at handleCheckout (/app/api/checkout/route.ts:42:15)
+    at ...
+```
+
+Errors are rendered with `util.inspect`, so custom Error subclasses
+(e.g. Snag's `breadcrumbs` / `info`) appear in the file instead of being
+flattened to `err.stack`. The CLI also truncates the file at startup, so
+each `bun run dev` begins from a clean slate.
+
+### Session vs. history
+
+`attachFileWriter` and the `debug-next-dev` CLI both truncate
+`<appName>.log` once per process by default — every restart starts
+fresh. Hot reloads inside a running process don't re-truncate (a
+module-level Set tracks "already cleared this process"), so in-session
+events aren't wiped.
+
+If you'd rather accumulate logs across restarts (e.g. to grep across
+yesterday's debug session), pass `resetOnStart: false`:
+
+```ts
+attachFileWriter({ appName: 'my-app', resetOnStart: false })
+```
+
+### Env overrides
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DEBUG_NEXT_APP_NAME` | `package.json#name` (CLI only) | Override app name |
+| `DEBUG_NEXT_LOG_DIR` | `<repo-root>/.debug-next` | Where log files are written |
+| `DEBUG_NEXT_DISABLE` | unset | Set to `"true"` to disable file writes |
+| `DEBUG_NEXT_FORCE` | unset | Required to enable file writes when `NODE_ENV=production` (disk logging is off by default in prod) |
+
+Add `.debug-next/` to your `.gitignore`.
+
 ## Roadmap:
 
-1. Browser compatibility.
-2. Support Winston transportation methodology.
-3. Out-of-box support for Sentry.
+1. Out-of-box support for Sentry.
