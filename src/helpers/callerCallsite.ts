@@ -112,7 +112,7 @@ export function callerCallsite({ depth = 0 } = {}) {
                 callers.unshift(callSite)
             }
 
-            const isBunRuntime = !!process.versions.bun
+            const isBunRuntime = typeof process !== 'undefined' && !!process.versions?.bun
 
             // skip the first function in bun runtime (callerCallsite)
             if (isBunRuntime && i === 0) continue

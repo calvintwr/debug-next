@@ -282,8 +282,27 @@ import('./routes');
 This way, initialization will get executed first as it is the code inside the first import statement.
 
 
+## Browser & edge runtimes
+
+`debug-next` is safe to import in non-Node runtimes (browser, edge). The
+loggers detect when `process.stdout` is unavailable and fall back to
+`console.log` / `console.error`, so the bundle won't crash when it runs
+outside Node:
+
+```js
+import { debug } from 'debug-next'
+
+const log = debug('namespace')
+log('Works in the browser too — routed through console.log') // no `process.stdout` required
+```
+
+Bun is also detected at runtime via an optional-chaining guard, so the
+caller-callsite namespacing degrades gracefully where `process.versions`
+is absent.
+
+
 ## Roadmap:
 
-1. Browser compatibility.
+1. ~~Browser compatibility.~~ ✅
 2. Support Winston transportation methodology.
 3. Out-of-box support for Sentry.

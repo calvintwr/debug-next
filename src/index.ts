@@ -238,7 +238,18 @@ const createLogger = (filenameOrNamespace: string | undefined) => {
     // this allow logs to be separated between non-error types (process.stdout) and error types (process.stderr)
     logger.log = (...args) => {
         const inspectOpts = cleanInspectOpts(logger.inspectOpts)
-        return process.stdout.write(`${formatWithOptions(inspectOpts, ...args)}\n`)
+        // In Node, write to stdout directly to keep non-error logs out of stderr.
+        // In non-Node runtimes (browser / edge), `process.stdout` is unavailable;
+        // fall back to console.log so the bundle doesn't crash.
+        if (
+            typeof process !== 'undefined' &&
+            typeof process.stdout?.write === 'function'
+        ) {
+            return process.stdout.write(`${formatWithOptions(inspectOpts, ...args)}\n`)
+        }
+        // eslint-disable-next-line no-console
+        console.log(formatWithOptions(inspectOpts, ...args))
+        return true
     }
     return logger
 }
