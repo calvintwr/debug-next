@@ -6,13 +6,13 @@
  *
  * Three public APIs:
  *
- *  - `appendRaw(text, opts)`: append a string verbatim (after ANSI
- *    strip). Used by the CLI to tee child stdout/stderr to disk and by
+ *  - `appendRaw(text, options)`: append a string verbatim (after ANSI
+ *    strip). Used by the CLI to mirror child stdout/stderr to disk and by
  *    the server/route helpers to emit synthesized lines.
- *  - `resetLogFile(opts)`: truncate the log file. Idempotent per
+ *  - `resetLogFile(options)`: truncate the log file. Idempotent per
  *    process via a module-level Set, so hot reloads don't keep
  *    clobbering mid-session content.
- *  - `createFileWriterHook(opts)`: returns a `LogBase` hook that writes
+ *  - `createFileWriterHook(options)`: returns a `LogBase` hook that writes
  *    one terminal-style line per log call.
  */
 
@@ -28,24 +28,24 @@ export type TFileWriterOptions = {
 
 // Keyed by cwd so a process that changes directory mid-run (rare, but
 // possible inside test harnesses or scripts) still resolves correctly.
-const logDirByCwd = new Map<string, string>()
-const dirsEnsured = new Set<string>()
+const logDirectoryByCwd = new Map<string, string>()
+const directoriesEnsured = new Set<string>()
 const filesReset = new Set<string>()
 
 const REPO_ROOT_WALK_MAX = 20
 const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]/g
 
 const findRepoRoot = (start: string): string => {
-    let cur = start
-    for (let i = 0; i < REPO_ROOT_WALK_MAX; i++) {
+    let currentDir = start
+    for (let depth = 0; depth < REPO_ROOT_WALK_MAX; depth++) {
         try {
-            if (fs.existsSync(path.join(cur, '.git'))) return cur
+            if (fs.existsSync(path.join(currentDir, '.git'))) return currentDir
         } catch {
             // ignore — fall through to next parent
         }
-        const parent = path.dirname(cur)
-        if (parent === cur) break
-        cur = parent
+        const parent = path.dirname(currentDir)
+        if (parent === currentDir) break
+        currentDir = parent
     }
     return start
 }
@@ -61,10 +61,10 @@ export const resolveLogDir = (override?: string): string => {
     if (override) return override
     if (process.env.DEBUG_NEXT_LOG_DIR) return process.env.DEBUG_NEXT_LOG_DIR
     const cwd = process.cwd()
-    const cached = logDirByCwd.get(cwd)
+    const cached = logDirectoryByCwd.get(cwd)
     if (cached) return cached
     const resolved = path.join(findRepoRoot(cwd), '.debug-next')
-    logDirByCwd.set(cwd, resolved)
+    logDirectoryByCwd.set(cwd, resolved)
     return resolved
 }
 
@@ -83,25 +83,25 @@ export const isFileWritingDisabled = (): boolean => {
     return false
 }
 
-const logFilePath = (opts: TFileWriterOptions): string =>
-    path.join(resolveLogDir(opts.logDir), `${opts.appName}.log`)
+const logFilePath = (options: TFileWriterOptions): string =>
+    path.join(resolveLogDir(options.logDir), `${options.appName}.log`)
 
-const ensureDir = (dir: string): void => {
-    if (dirsEnsured.has(dir)) return
-    fs.mkdirSync(dir, { recursive: true })
-    dirsEnsured.add(dir)
+const ensureDirectory = (directory: string): void => {
+    if (directoriesEnsured.has(directory)) return
+    fs.mkdirSync(directory, { recursive: true })
+    directoriesEnsured.add(directory)
 }
 
 /**
  * Append raw text to the app's log file. ANSI escape codes are stripped.
  * Never throws.
  */
-export const appendRaw = (text: string, opts: TFileWriterOptions): void => {
+export const appendRaw = (text: string, options: TFileWriterOptions): void => {
     if (isFileWritingDisabled()) return
-    const fp = logFilePath(opts)
+    const filePath = logFilePath(options)
     try {
-        ensureDir(path.dirname(fp))
-        fs.appendFileSync(fp, text.replace(ANSI_RE, ''))
+        ensureDirectory(path.dirname(filePath))
+        fs.appendFileSync(filePath, text.replace(ANSI_RE, ''))
     } catch {
         // hook must never throw
     }
@@ -112,14 +112,14 @@ export const appendRaw = (text: string, opts: TFileWriterOptions): void => {
  * second call from the same Node process (e.g. after a hot reload) is a
  * no-op, so in-session events aren't wiped.
  */
-export const resetLogFile = (opts: TFileWriterOptions): void => {
+export const resetLogFile = (options: TFileWriterOptions): void => {
     if (isFileWritingDisabled()) return
-    const fp = logFilePath(opts)
-    if (filesReset.has(fp)) return
+    const filePath = logFilePath(options)
+    if (filesReset.has(filePath)) return
     try {
-        ensureDir(path.dirname(fp))
-        fs.writeFileSync(fp, '')
-        filesReset.add(fp)
+        ensureDirectory(path.dirname(filePath))
+        fs.writeFileSync(filePath, '')
+        filesReset.add(filePath)
     } catch {
         // best effort
     }
@@ -147,16 +147,16 @@ export type TPipeStdStreamsToFileOptions = TFileWriterOptions & {
  *
  * Idempotent across hot reloads via a symbol on the stream object.
  */
-export const pipeStdStreamsToFile = (opts: TPipeStdStreamsToFileOptions): void => {
+export const pipeStdStreamsToFile = (options: TPipeStdStreamsToFileOptions): void => {
     if (isFileWritingDisabled()) return
 
-    if (opts.resetOnStart !== false) {
-        resetLogFile({ appName: opts.appName, logDir: opts.logDir })
+    if (options.resetOnStart !== false) {
+        resetLogFile({ appName: options.appName, logDir: options.logDir })
     }
 
-    const writeOpts: TFileWriterOptions = {
-        appName: opts.appName,
-        ...(opts.logDir ? { logDir: opts.logDir } : {}),
+    const writeOptions: TFileWriterOptions = {
+        appName: options.appName,
+        ...(options.logDir ? { logDir: options.logDir } : {}),
     }
 
     const wrap = (stream: TWrappedStream): void => {
@@ -167,7 +167,7 @@ export const pipeStdStreamsToFile = (opts: TPipeStdStreamsToFileOptions): void =
         // when a write is chunked.
         let pending = ''
 
-        stream.write = function teedWrite(
+        stream.write = function pipedWrite(
             chunk: string | Uint8Array,
             ...rest: unknown[]
         ): boolean {
@@ -184,18 +184,21 @@ export const pipeStdStreamsToFile = (opts: TPipeStdStreamsToFileOptions): void =
                     if (newlineAt >= 0) {
                         const completeLines = pending.slice(0, newlineAt)
                         pending = pending.slice(newlineAt + 1)
-                        const ts = new Date().toISOString()
+                        const timestamp = new Date().toISOString()
                         const stamped = completeLines
                             .split('\n')
-                            .map(line => `[${ts}] ${line}`)
+                            .map(line => `[${timestamp}] ${line}`)
                             .join('\n')
-                        appendRaw(`${stamped}\n`, writeOpts)
+                        appendRaw(`${stamped}\n`, writeOptions)
                     }
                     // Force-flush an oversized partial line so a long
                     // newline-less stream (binary dump, single-line JSON
                     // blob) can't grow `pending` without bound.
                     if (pending.length > MAX_PENDING_BYTES) {
-                        appendRaw(`[${new Date().toISOString()}] ${pending}\n`, writeOpts)
+                        appendRaw(
+                            `[${new Date().toISOString()}] ${pending}\n`,
+                            writeOptions,
+                        )
                         pending = ''
                     }
                 }
@@ -219,7 +222,7 @@ export const pipeStdStreamsToFile = (opts: TPipeStdStreamsToFileOptions): void =
  * with `util.inspect`, so their enumerable properties (breadcrumbs,
  * info, etc.) appear in the file instead of being silently dropped.
  */
-export const createFileWriterHook = (opts: TFileWriterOptions): TDebugHook => {
+export const createFileWriterHook = (options: TFileWriterOptions): TDebugHook => {
     return (args, level, _isEnabled, scope) => {
         const formatted = inspect(args.length === 1 ? args[0] : args, {
             depth: 4,
@@ -228,8 +231,8 @@ export const createFileWriterHook = (opts: TFileWriterOptions): TDebugHook => {
         })
         const tag = scope ? `${level} ${scope}` : level
         appendRaw(
-            `[${new Date().toISOString()}] [${opts.appName}] ${tag}: ${formatted}\n`,
-            opts,
+            `[${new Date().toISOString()}] [${options.appName}] ${tag}: ${formatted}\n`,
+            options,
         )
     }
 }

@@ -90,22 +90,22 @@ export const reportClientEvent = (endpoint: string, input: TClientEventInput): v
  * inlines `process.env.NODE_ENV` into client bundles at build time, so
  * this check costs nothing at runtime.
  */
-export const registerClientCapture = (opts: TRegisterClientCaptureOptions): void => {
+export const registerClientCapture = (options: TRegisterClientCaptureOptions): void => {
     if (typeof window === 'undefined') return
     if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
         return
     }
 
-    const endpoint = opts.endpoint ?? '/api/_debug-next'
+    const endpoint = options.endpoint ?? '/api/_debug-next'
     const flag = '__debug_next_capture_installed__'
-    const w = window as unknown as Record<string, unknown>
-    if (w[flag]) return
-    w[flag] = true
+    const windowGlobals = window as unknown as Record<string, unknown>
+    if (windowGlobals[flag]) return
+    windowGlobals[flag] = true
 
     window.addEventListener('error', event => {
         const err = event.error instanceof Error ? event.error : null
         reportClientEvent(endpoint, {
-            appName: opts.appName,
+            appName: options.appName,
             source: 'client-error',
             message: err?.message ?? event.message ?? 'Uncaught error',
             stack: err?.stack,
@@ -122,7 +122,7 @@ export const registerClientCapture = (opts: TRegisterClientCaptureOptions): void
             err?.message ??
             (typeof reason === 'string' ? reason : 'Unhandled promise rejection')
         reportClientEvent(endpoint, {
-            appName: opts.appName,
+            appName: options.appName,
             source: 'client-rejection',
             message,
             stack: err?.stack,

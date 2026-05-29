@@ -61,20 +61,20 @@ export type TAttachFileWriterOptions = {
  * Idempotent: silently no-ops if `LogBase` is already initialized or
  * the hook is already attached.
  */
-export const attachFileWriter = (opts: TAttachFileWriterOptions): void => {
+export const attachFileWriter = (options: TAttachFileWriterOptions): void => {
     if (process.env.NEXT_RUNTIME === 'edge') return
 
-    if (opts.resetOnStart !== false) {
-        resetLogFile({ appName: opts.appName, logDir: opts.logDir })
+    if (options.resetOnStart !== false) {
+        resetLogFile({ appName: options.appName, logDir: options.logDir })
     }
 
-    if (opts.initLogBase !== false) {
-        const baseDir =
-            typeof opts.initLogBase === 'object'
-                ? opts.initLogBase.baseDir
+    if (options.initLogBase !== false) {
+        const baseDirectory =
+            typeof options.initLogBase === 'object'
+                ? options.initLogBase.baseDir
                 : process.cwd()
         try {
-            LogBase.init(opts.appName, baseDir)
+            LogBase.init(options.appName, baseDirectory)
         } catch {
             // already initialized
         }
@@ -86,7 +86,10 @@ export const attachFileWriter = (opts: TAttachFileWriterOptions): void => {
     // other hooks the host attaches (e.g. Sentry) still work.
     if (isFileWritingDisabled()) return
 
-    const hook = createFileWriterHook({ appName: opts.appName, logDir: opts.logDir })
+    const hook = createFileWriterHook({
+        appName: options.appName,
+        logDir: options.logDir,
+    })
     try {
         LogBase.attachHook('all', HOOK_NAME, hook)
     } catch {
@@ -129,9 +132,9 @@ const formatRequestError = (
 ): string => {
     const err = error instanceof Error ? error : new Error(String(error))
     const route = context?.routeType ?? 'route'
-    const reqLine = `${request.method ?? ''} ${request.path ?? ''}`.trim()
+    const requestLine = `${request.method ?? ''} ${request.path ?? ''}`.trim()
     const header = `[${new Date().toISOString()}] [${appName}] logError ${route} — ${
-        reqLine || '(no request)'
+        requestLine || '(no request)'
     }`
     const body = inspect(err, { depth: 4, colors: false, breakLength: 120 })
     return `${header}\n${body}\n\n`
@@ -155,17 +158,17 @@ const formatRequestError = (
  * ```
  */
 export const createOnRequestError = (
-    opts: TCreateOnRequestErrorOptions,
+    options: TCreateOnRequestErrorOptions,
 ): TOnRequestError => {
     return async (error, request, context) => {
-        appendRaw(formatRequestError(opts.appName, error, request, context), {
-            appName: opts.appName,
-            ...(opts.logDir ? { logDir: opts.logDir } : {}),
+        appendRaw(formatRequestError(options.appName, error, request, context), {
+            appName: options.appName,
+            ...(options.logDir ? { logDir: options.logDir } : {}),
         })
 
-        if (opts.sentry) {
+        if (options.sentry) {
             try {
-                await opts.sentry(error, request, context)
+                await options.sentry(error, request, context)
             } catch {
                 // never throw from instrumentation
             }

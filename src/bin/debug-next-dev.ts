@@ -38,18 +38,21 @@ const USAGE = [
     '',
 ].join('\n')
 
-const log = (msg: string): void => void process.stderr.write(`[debug-next-dev] ${msg}\n`)
+const log = (message: string): void =>
+    void process.stderr.write(`[debug-next-dev] ${message}\n`)
 
-type TParsedArgs = { kind: 'help'; explicit: boolean } | { kind: 'run'; cmd: string[] }
+type TParsedArgs =
+    | { kind: 'help'; explicit: boolean }
+    | { kind: 'run'; command: string[] }
 
 const parseArgs = (argv: string[]): TParsedArgs => {
     if (argv.length === 0) return { kind: 'help', explicit: false }
     if (argv[0] === '-h' || argv[0] === '--help') {
         return { kind: 'help', explicit: true }
     }
-    const cmd = argv[0] === '--' ? argv.slice(1) : argv
-    if (cmd.length === 0) return { kind: 'help', explicit: false }
-    return { kind: 'run', cmd }
+    const command = argv[0] === '--' ? argv.slice(1) : argv
+    if (command.length === 0) return { kind: 'help', explicit: false }
+    return { kind: 'run', command }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -61,9 +64,9 @@ const stripNpmScope = (name: string): string => name.replace(/^@[^/]+\//, '')
 const readPackageName = (cwd: string): string | undefined => {
     try {
         const raw = fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
-        const pkg = JSON.parse(raw) as { name?: unknown }
-        if (typeof pkg.name === 'string' && pkg.name.length > 0) {
-            return stripNpmScope(pkg.name)
+        const packageJson = JSON.parse(raw) as { name?: unknown }
+        if (typeof packageJson.name === 'string' && packageJson.name.length > 0) {
+            return stripNpmScope(packageJson.name)
         }
     } catch {
         // fall through
@@ -87,16 +90,16 @@ const wireSignalForwarding = (child: ChildProcess): void => {
     process.on('SIGHUP', () => forward('SIGHUP'))
 }
 
-const teeStream = (
+const pipeStream = (
     stream: NodeJS.ReadableStream | null,
-    sink: NodeJS.WriteStream,
-    writeOpts: { appName: string; logDir?: string },
+    terminalStream: NodeJS.WriteStream,
+    writeOptions: { appName: string; logDir?: string },
 ): void => {
     if (!stream) return
     stream.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf-8')
-        sink.write(text)
-        appendRaw(text, writeOpts)
+        terminalStream.write(text)
+        appendRaw(text, writeOptions)
     })
     // An unhandled 'error' on a Readable would crash the parent CLI.
     stream.on('error', err => log(`stream error: ${err.message}`))
@@ -114,27 +117,27 @@ const main = (): void => {
     }
 
     const appName = resolveAppName()
-    const logDir = process.env.DEBUG_NEXT_LOG_DIR
-    const writeOpts = { appName, ...(logDir ? { logDir } : {}) }
+    const logDirectory = process.env.DEBUG_NEXT_LOG_DIR
+    const writeOptions = { appName, ...(logDirectory ? { logDir: logDirectory } : {}) }
 
-    resetLogFile(writeOpts)
+    resetLogFile(writeOptions)
     appendRaw(
-        `[${new Date().toISOString()}] [debug-next-dev] wrapping: ${parsed.cmd.join(
+        `[${new Date().toISOString()}] [debug-next-dev] wrapping: ${parsed.command.join(
             ' ',
         )}\n`,
-        writeOpts,
+        writeOptions,
     )
 
-    log(`wrapping: ${parsed.cmd.join(' ')}`)
+    log(`wrapping: ${parsed.command.join(' ')}`)
     log(`app: ${appName}`)
 
-    const child = spawn(parsed.cmd[0], parsed.cmd.slice(1), {
+    const child = spawn(parsed.command[0], parsed.command.slice(1), {
         stdio: ['inherit', 'pipe', 'pipe'],
         env: process.env,
     })
 
-    teeStream(child.stdout, process.stdout, writeOpts)
-    teeStream(child.stderr, process.stderr, writeOpts)
+    pipeStream(child.stdout, process.stdout, writeOptions)
+    pipeStream(child.stderr, process.stderr, writeOptions)
     wireSignalForwarding(child)
 
     child.on('error', err => {

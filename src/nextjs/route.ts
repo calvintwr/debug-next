@@ -17,8 +17,8 @@ const jsonResponse = (body: unknown, status = 200): Response =>
         headers: { 'Content-Type': 'application/json' },
     })
 
-const truncate = (s: string, max: number): string =>
-    s.length > max ? s.slice(0, max) : s
+const truncate = (value: string, maxLength: number): string =>
+    value.length > maxLength ? value.slice(0, maxLength) : value
 
 // We drop ASCII control characters from anything the client sends so a
 // malicious payload can't slip terminal escapes, null bytes, or forged
@@ -31,8 +31,8 @@ const LINE_FEED = 0x0a
 const CARRIAGE_RETURN = 0x0d
 const DEL = 0x7f
 
-const isSafeForLog = (ch: string): boolean => {
-    const code = ch.charCodeAt(0)
+const isSafeForLog = (character: string): boolean => {
+    const code = character.charCodeAt(0)
     // Printable ASCII (and any non-ASCII character — emoji, accented
     // letters, CJK, etc.) is fine.
     if (code >= 0x20 && code !== DEL) return true
@@ -40,44 +40,45 @@ const isSafeForLog = (ch: string): boolean => {
     return code === TAB || code === LINE_FEED || code === CARRIAGE_RETURN
 }
 
-const stripUnsafeChars = (s: string): string => {
-    let out = ''
-    for (let i = 0; i < s.length; i++) {
-        const ch = s[i]
-        if (isSafeForLog(ch)) out += ch
+const stripUnsafeChars = (input: string): string => {
+    let sanitized = ''
+    for (let index = 0; index < input.length; index++) {
+        const character = input[index]
+        if (isSafeForLog(character)) sanitized += character
     }
-    return out
+    return sanitized
 }
 
-const collapseLineBreaks = (s: string): string => {
-    let out = ''
-    for (let i = 0; i < s.length; i++) {
-        const ch = s[i]
-        out += ch === '\n' || ch === '\r' ? ' ' : ch
+const collapseLineBreaks = (input: string): string => {
+    let result = ''
+    for (let index = 0; index < input.length; index++) {
+        const character = input[index]
+        result += character === '\n' || character === '\r' ? ' ' : character
     }
-    return out
+    return result
 }
 
 // For headers (message, scope, digest, etc.): also collapse newlines
 // into spaces so an attacker can't inject a forged "[ts] [app] FORGED
 // LINE" entry by sneaking a `\n` into the payload.
-const sanitizeSingleLine = (s: string): string => collapseLineBreaks(stripUnsafeChars(s))
+const sanitizeSingleLine = (input: string): string =>
+    collapseLineBreaks(stripUnsafeChars(input))
 
 // For multi-line fields (stack): keep newlines — a real stack trace
 // spans several lines.
-const sanitizeMultiLine = (s: string): string => stripUnsafeChars(s)
+const sanitizeMultiLine = (input: string): string => stripUnsafeChars(input)
 
-const asSingleLine = (v: unknown, max: number): string | undefined =>
-    typeof v === 'string' ? truncate(sanitizeSingleLine(v), max) : undefined
+const asSingleLine = (value: unknown, maxLength: number): string | undefined =>
+    typeof value === 'string' ? truncate(sanitizeSingleLine(value), maxLength) : undefined
 
-const asMultiLine = (v: unknown, max: number): string | undefined =>
-    typeof v === 'string' ? truncate(sanitizeMultiLine(v), max) : undefined
+const asMultiLine = (value: unknown, maxLength: number): string | undefined =>
+    typeof value === 'string' ? truncate(sanitizeMultiLine(value), maxLength) : undefined
 
 const MAX_META_BYTES = 8_000
-const safeMeta = (m: unknown): string | undefined => {
-    if (!Array.isArray(m) || m.length === 0) return undefined
+const safeMeta = (meta: unknown): string | undefined => {
+    if (!Array.isArray(meta) || meta.length === 0) return undefined
     try {
-        const serialized = JSON.stringify(m)
+        const serialized = JSON.stringify(meta)
         return serialized.length > MAX_META_BYTES
             ? `${serialized.slice(0, MAX_META_BYTES)}… (truncated)`
             : serialized
@@ -102,28 +103,28 @@ type TClientPayload = {
 
 const formatClientEvent = (raw: unknown, fallbackAppName: string): string | null => {
     if (!raw || typeof raw !== 'object') return null
-    const p = raw as TClientPayload
+    const payload = raw as TClientPayload
 
     const source =
-        typeof p.source === 'string' && CLIENT_SOURCES.has(p.source)
-            ? p.source
+        typeof payload.source === 'string' && CLIENT_SOURCES.has(payload.source)
+            ? payload.source
             : 'client-error'
-    const ts = asSingleLine(p.ts, 64) ?? new Date().toISOString()
-    const appName = asSingleLine(p.appName, 128) ?? fallbackAppName
-    const level = asSingleLine(p.level, 32) ?? 'logError'
-    const message = asSingleLine(p.message, 4000) ?? ''
-    const stack = asMultiLine(p.stack, 16_000)
-    const scope = asSingleLine(p.scope, 256)
-    const digest = asSingleLine(p.digest, 256)
+    const timestamp = asSingleLine(payload.ts, 64) ?? new Date().toISOString()
+    const appName = asSingleLine(payload.appName, 128) ?? fallbackAppName
+    const level = asSingleLine(payload.level, 32) ?? 'logError'
+    const message = asSingleLine(payload.message, 4000) ?? ''
+    const stack = asMultiLine(payload.stack, 16_000)
+    const scope = asSingleLine(payload.scope, 256)
+    const digest = asSingleLine(payload.digest, 256)
 
-    const header = [`[${ts}]`, `[${appName}]`, level, source]
+    const header = [`[${timestamp}]`, `[${appName}]`, level, source]
         .concat(scope ? [scope] : [])
         .concat(digest ? [`digest=${digest}`] : [])
         .join(' ')
 
     const lines: string[] = [`${header} — ${message}`]
     if (stack) lines.push(stack)
-    const meta = safeMeta(p.meta)
+    const meta = safeMeta(payload.meta)
     if (meta) lines.push(`meta: ${meta}`)
     return `${lines.join('\n')}\n\n`
 }
@@ -155,7 +156,7 @@ const formatClientEvent = (raw: unknown, fallbackAppName: string): string | null
  * about whether you actually want this. Sentry is the right durable
  * sink for production client errors. `debug-next` is a dev-loop tool.
  */
-export const createDebugNextRoute = (opts: TCreateDebugNextRouteOptions) => {
+export const createDebugNextRoute = (options: TCreateDebugNextRouteOptions) => {
     const POST = async (request: Request): Promise<Response> => {
         // 404 in production (or whenever writes are disabled) so the
         // endpoint doesn't leak its existence and refuses to parse the
@@ -171,12 +172,12 @@ export const createDebugNextRoute = (opts: TCreateDebugNextRouteOptions) => {
             return jsonResponse({ ok: false, error: 'invalid_json' }, 400)
         }
 
-        const formatted = formatClientEvent(body, opts.appName)
+        const formatted = formatClientEvent(body, options.appName)
         if (!formatted) {
             return jsonResponse({ ok: false, error: 'invalid_payload' }, 400)
         }
 
-        appendRaw(formatted, opts)
+        appendRaw(formatted, options)
         return jsonResponse({ ok: true })
     }
 
