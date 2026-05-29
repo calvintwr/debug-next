@@ -248,7 +248,7 @@ const createLogger = (filenameOrNamespace: string | undefined) => {
             return process.stdout.write(`${formatWithOptions(inspectOpts, ...args)}\n`)
         }
         // eslint-disable-next-line no-console
-        console.log(...args)
+        console.log(formatWithOptions(inspectOpts, ...args))
         return true
     }
     return logger
