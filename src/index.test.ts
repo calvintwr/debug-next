@@ -69,32 +69,35 @@ describe('Log', () => {
     })
 
     describe('browser environment (no process.stdout)', () => {
-        should('fall back to console.log when process.stdout.write is unavailable', () => {
-            const testMessage = '#log should run in browser'
+        should(
+            'fall back to console.log when process.stdout.write is unavailable',
+            () => {
+                const testMessage = '#log should run in browser'
 
-            // simulate a browser/edge runtime where `process.stdout` has no
-            // `write` function. We only remove `write` so the rest of `debug`
-            // (which reads process during init) keeps working.
-            const originalWrite = process.stdout.write
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(process.stdout as any).write = undefined
+                // simulate a browser/edge runtime where `process.stdout` has no
+                // `write` function. We only remove `write` so the rest of `debug`
+                // (which reads process during init) keeps working.
+                const originalWrite = process.stdout.write
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ;(process.stdout as any).write = undefined
 
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {
-                /** swallow output */
-            })
+                const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {
+                    /** swallow output */
+                })
 
-            try {
-                const { log } = Log(__filename)
-                log(testMessage)
-                expectSpyToHaveBeenCalledWithString(
-                    consoleSpy,
-                    `${NAMESPACE} ${testMessage}`,
-                )
-            } finally {
-                consoleSpy.mockRestore()
-                process.stdout.write = originalWrite
-            }
-        })
+                try {
+                    const { log } = Log(__filename)
+                    log(testMessage)
+                    expectSpyToHaveBeenCalledWithString(
+                        consoleSpy,
+                        `${NAMESPACE} ${testMessage}`,
+                    )
+                } finally {
+                    consoleSpy.mockRestore()
+                    process.stdout.write = originalWrite
+                }
+            },
+        )
     })
 
     describe('log.extend', () => {
